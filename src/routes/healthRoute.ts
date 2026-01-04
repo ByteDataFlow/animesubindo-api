@@ -22,7 +22,7 @@ const healthRoute = createRoute({
 })
 
 export const registerHealthRoute = (app: OpenAPIHono) => {
-    app.openapi(healthRoute, ((c) => {
+    app.openapi(healthRoute, ((c: any) => {
         return c.json({
             status: 'healthy' as const,
             timestamp: new Date().toISOString(),
