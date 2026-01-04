@@ -16,7 +16,7 @@
 
 ### 🚀 Features
 
-- **⚡ Kecepatan Ekstrem**: Dibangun di atas **Hono**, berjalan secara native di Edge. Overhead routing di bawah satu milidetik.
+- **⚡ Kecepatan Ekstrem**: Dibangun di atas **Hono**, dioptimalkan untuk **Vercel Serverless**. Overhead routing di bawah satu milidetik.
 - **🛡️ Integritas Tipe Data**: Keamanan tipe *end-to-end* dengan validasi skema **Zod**. Menjamin reliabilitas waktu kompilasi dan waktu jalan.
 - **👁️ Observabilitas Penuh**: Dilengkapi dengan pencatatan permintaan (*request logging*) terintegrasi dan pemantauan kesehatan sistem (*health monitoring*) untuk keandalan tingkat produksi.
 - **🔒 Keamanan Enterprise**: 
@@ -32,7 +32,7 @@ Dirancang menggunakan pola desain **Controller-Service-Route** yang modular untu
 
 ```mermaid
 graph TD
-    Client["Klien / Frontend"] -->|Request| Gateway["Hono / Edge"]
+    Client["Klien / Frontend"] -->|Request| Gateway["Hono / Vercel (Node Adapter)"]
     Gateway -->|Security Check| Middleware["Middleware Stack\n(Logger, CORS, RateLimit)"]
     Middleware -->|Validation| Zod["Zod Schema / OpenAPI"]
     Zod -->|Valid Request| Controller["Controller Layer"]
@@ -72,7 +72,7 @@ graph TD
 git clone https://github.com/ByteDataFlow/animesubindo-api.git
 
 # Navigasi ke direktori proyek
-cd animesubindo-api/backend
+cd animesubindo-api
 
 # Instalasi dependensi
 npm install
