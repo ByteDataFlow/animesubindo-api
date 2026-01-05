@@ -3,5 +3,5 @@ import { EpisodeController } from '../controllers/EpisodeController'
 import { getEpisodeDetailRoute } from '../routeDefs'
 
 export const registerEpisodeRoutes = (app: OpenAPIHono) => {
-    app.openapi(getEpisodeDetailRoute, EpisodeController.getEpisodeDetail as any)
+    app.openapi(getEpisodeDetailRoute, EpisodeController.getEpisodeDetail)
 }

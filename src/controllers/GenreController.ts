@@ -1,10 +1,8 @@
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { scrapeGenreList, scrapeAnimeByGenre } from '../scrapers/otakudesu'
 import { getCachedData } from '../lib/utils'
-import { getGenreListRoute, getAnimeByGenreRoute } from '../routeDefs'
 
 export class GenreController {
-
     static getGenreList = async (c: any) => {
         const data = await getCachedData('v1_genrelist', scrapeGenreList, 86400)
         return c.json({ status: 'success', data }, 200)

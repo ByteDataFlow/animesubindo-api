@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
 
 const healthRoute = createRoute({
@@ -23,10 +24,13 @@ const healthRoute = createRoute({
 
 export const registerHealthRoute = (app: OpenAPIHono) => {
     app.openapi(healthRoute, ((c: any) => {
-        return c.json({
-            status: 'healthy' as const,
-            timestamp: new Date().toISOString(),
-            uptime: process.uptime()
-        }, 200)
+        return c.json(
+            {
+                status: 'healthy' as const,
+                timestamp: new Date().toISOString(),
+                uptime: process.uptime()
+            },
+            200
+        )
     }) as any)
 }

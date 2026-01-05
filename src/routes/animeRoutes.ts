@@ -11,11 +11,11 @@ import {
 } from '../routeDefs'
 
 export const registerAnimeRoutes = (app: OpenAPIHono) => {
-    app.openapi(getHomeRoute, AnimeController.getHome as any)
-    app.openapi(searchRoute, AnimeController.search as any)
-    app.openapi(getAnimeDetailRoute, AnimeController.getDetail as any)
-    app.openapi(getAnimeListRoute, AnimeController.getList as any)
-    app.openapi(getScheduleRoute, AnimeController.getSchedule as any)
-    app.openapi(getOngoingRoute, AnimeController.getOngoing as any)
-    app.openapi(getCompletedRoute, AnimeController.getCompleted as any)
+    app.openapi(getHomeRoute, AnimeController.getHome)
+    app.openapi(searchRoute, AnimeController.search)
+    app.openapi(getAnimeDetailRoute, AnimeController.getDetail)
+    app.openapi(getAnimeListRoute, AnimeController.getList)
+    app.openapi(getScheduleRoute, AnimeController.getSchedule)
+    app.openapi(getOngoingRoute, AnimeController.getOngoing)
+    app.openapi(getCompletedRoute, AnimeController.getCompleted)
 }

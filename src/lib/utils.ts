@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import NodeCache from 'node-cache'
 import { Context } from 'hono'
 import { z } from '@hono/zod-openapi'
@@ -7,13 +8,13 @@ export const cache = new NodeCache({ stdTTL: 300, checkperiod: 600 })
 
 // --- Custom Error Class ---
 export class AppError extends Error {
-    statusCode: number;
-    code: string;
+    statusCode: number
+    code: string
 
     constructor(message: string, statusCode: number = 500, code: string = 'INTERNAL_ERROR') {
-        super(message);
-        this.statusCode = statusCode;
-        this.code = code;
+        super(message)
+        this.statusCode = statusCode
+        this.code = code
     }
 }
 
@@ -25,7 +26,11 @@ export class AppError extends Error {
  * @param ttl - Time-to-live in seconds.
  * @returns The cached or fetched data.
  */
-export async function getCachedData<T>(key: string, fetchFunction: () => Promise<T>, ttl: number): Promise<T> {
+export async function getCachedData<T>(
+    key: string,
+    fetchFunction: () => Promise<T>,
+    ttl: number
+): Promise<T> {
     const cached = cache.get<T>(key)
     if (cached) return cached
 
@@ -34,19 +39,19 @@ export async function getCachedData<T>(key: string, fetchFunction: () => Promise
         // If data is null/undefined/empty array, we might still want to cache it or not depending on strategy.
         // For now, consistent with previous logic, we return it but don't cache if explicit null?
         // Original logic: if (!data) return data;
-        if (!data) return data;
+        if (!data) return data
 
         cache.set(key, data, ttl)
         return data
     } catch (error: any) {
         console.error(`Cache fetch failed for ${key}:`, error)
         if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-            throw new AppError('Upstream Server Unreachable', 502, 'UPSTREAM_ERROR');
+            throw new AppError('Upstream Server Unreachable', 502, 'UPSTREAM_ERROR')
         }
         if (error.response?.status === 404) {
-            throw new AppError('Resource Not Found Upstream', 404, 'UPSTREAM_NOT_FOUND');
+            throw new AppError('Resource Not Found Upstream', 404, 'UPSTREAM_NOT_FOUND')
         }
-        throw new AppError(error.message || 'Internal Scraper Error', 500, 'SCRAPER_ERROR');
+        throw new AppError(error.message || 'Internal Scraper Error', 500, 'SCRAPER_ERROR')
     }
 }
 
@@ -54,24 +59,33 @@ export async function getCachedData<T>(key: string, fetchFunction: () => Promise
 export const globalErrorHandler = (err: Error, c: Context) => {
     console.error('Global Error:', err)
     if (err instanceof AppError) {
-        return c.json({
-            status: 'error',
-            message: err.message,
-            code: err.code
-        }, err.statusCode as any)
+        return c.json(
+            {
+                status: 'error',
+                message: err.message,
+                code: err.code
+            },
+            err.statusCode as any
+        )
     }
     // Zod Validation Error (from Hono OpenAPI)
     if (err instanceof z.ZodError) {
-        return c.json({
-            status: 'error',
-            message: 'Validation failed',
-            code: 'VALIDATION_ERROR',
-            details: err.flatten()
-        }, 400)
+        return c.json(
+            {
+                status: 'error',
+                message: 'Validation failed',
+                code: 'VALIDATION_ERROR',
+                details: err.flatten()
+            },
+            400
+        )
     }
-    return c.json({
-        status: 'error',
-        message: 'Internal Server Error',
-        code: 'INTERNAL_ERROR'
-    }, 500)
+    return c.json(
+        {
+            status: 'error',
+            message: 'Internal Server Error',
+            code: 'INTERNAL_ERROR'
+        },
+        500
+    )
 }

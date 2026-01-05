@@ -18,7 +18,8 @@ export const getHomeRoute = createRoute({
     method: 'get',
     path: '/api/home',
     summary: 'Get Latest Anime',
-    description: 'Returns a list of the latest uploaded anime, separated by Ongoing and Complete status.',
+    description:
+        'Returns a list of the latest uploaded anime, separated by Ongoing and Complete status.',
     responses: {
         200: {
             content: {
@@ -26,7 +27,10 @@ export const getHomeRoute = createRoute({
             },
             description: 'Successful response'
         },
-        500: { content: { 'application/json': { schema: ErrorResponseSchema } }, description: 'Server Error' }
+        500: {
+            content: { 'application/json': { schema: ErrorResponseSchema } },
+            description: 'Server Error'
+        }
     }
 })
 
@@ -41,10 +45,15 @@ export const searchRoute = createRoute({
     },
     responses: {
         200: {
-            content: { 'application/json': { schema: SuccessResponseSchema(z.array(AnimeSchema)) } },
+            content: {
+                'application/json': { schema: SuccessResponseSchema(z.array(AnimeSchema)) }
+            },
             description: 'Search results'
         },
-        400: { content: { 'application/json': { schema: ErrorResponseSchema } }, description: 'Validation Error' }
+        400: {
+            content: { 'application/json': { schema: ErrorResponseSchema } },
+            description: 'Validation Error'
+        }
     }
 })
 
@@ -60,7 +69,10 @@ export const getAnimeDetailRoute = createRoute({
             content: { 'application/json': { schema: SuccessResponseSchema(AnimeDetailSchema) } },
             description: 'Anime details'
         },
-        404: { content: { 'application/json': { schema: ErrorResponseSchema } }, description: 'Not Found' }
+        404: {
+            content: { 'application/json': { schema: ErrorResponseSchema } },
+            description: 'Not Found'
+        }
     }
 })
 
@@ -69,7 +81,12 @@ export const getAnimeListRoute = createRoute({
     path: '/api/anime-list',
     summary: 'Get All Anime',
     responses: {
-        200: { content: { 'application/json': { schema: SuccessResponseSchema(z.array(AnimeListSchema)) } }, description: 'List of all anime' }
+        200: {
+            content: {
+                'application/json': { schema: SuccessResponseSchema(z.array(AnimeListSchema)) }
+            },
+            description: 'List of all anime'
+        }
     }
 })
 
@@ -78,7 +95,12 @@ export const getScheduleRoute = createRoute({
     path: '/api/schedule',
     summary: 'Get Release Schedule',
     responses: {
-        200: { content: { 'application/json': { schema: SuccessResponseSchema(z.array(ScheduleSchema)) } }, description: 'Weekly schedule' }
+        200: {
+            content: {
+                'application/json': { schema: SuccessResponseSchema(z.array(ScheduleSchema)) }
+            },
+            description: 'Weekly schedule'
+        }
     }
 })
 
@@ -88,11 +110,21 @@ export const getOngoingRoute = createRoute({
     summary: 'Get Ongoing Anime',
     request: {
         query: z.object({
-            page: z.string().optional().default('1').transform((val) => Number(val)).refine((val) => val >= 1, { message: "Page must be >= 1" })
+            page: z
+                .string()
+                .optional()
+                .default('1')
+                .transform((val) => Number(val))
+                .refine((val) => val >= 1, { message: 'Page must be >= 1' })
         })
     },
     responses: {
-        200: { content: { 'application/json': { schema: SuccessResponseSchema(z.array(AnimeSchema)) } }, description: 'List of ongoing anime' }
+        200: {
+            content: {
+                'application/json': { schema: SuccessResponseSchema(z.array(AnimeSchema)) }
+            },
+            description: 'List of ongoing anime'
+        }
     }
 })
 
@@ -102,11 +134,21 @@ export const getCompletedRoute = createRoute({
     summary: 'Get Completed Anime',
     request: {
         query: z.object({
-            page: z.string().optional().default('1').transform((val) => Number(val)).refine((val) => val >= 1)
+            page: z
+                .string()
+                .optional()
+                .default('1')
+                .transform((val) => Number(val))
+                .refine((val) => val >= 1)
         })
     },
     responses: {
-        200: { content: { 'application/json': { schema: SuccessResponseSchema(z.array(AnimeSchema)) } }, description: 'List of completed anime' }
+        200: {
+            content: {
+                'application/json': { schema: SuccessResponseSchema(z.array(AnimeSchema)) }
+            },
+            description: 'List of completed anime'
+        }
     }
 })
 
@@ -117,7 +159,12 @@ export const getGenreListRoute = createRoute({
     path: '/api/genres',
     summary: 'Get Genre List',
     responses: {
-        200: { content: { 'application/json': { schema: SuccessResponseSchema(z.array(GenreSchema)) } }, description: 'List of genres' }
+        200: {
+            content: {
+                'application/json': { schema: SuccessResponseSchema(z.array(GenreSchema)) }
+            },
+            description: 'List of genres'
+        }
     }
 })
 
@@ -128,7 +175,11 @@ export const getAnimeByGenreRoute = createRoute({
     request: {
         params: z.object({ slug: z.string() }),
         query: z.object({
-            page: z.string().optional().default('1').transform(v => Number(v))
+            page: z
+                .string()
+                .optional()
+                .default('1')
+                .transform((v) => Number(v))
         })
     },
     responses: {
@@ -174,8 +225,14 @@ export const getEpisodeDetailRoute = createRoute({
         params: z.object({ slug: z.string() })
     },
     responses: {
-        200: { content: { 'application/json': { schema: SuccessResponseSchema(EpisodeDetailSchema) } }, description: 'Stream and download links' },
-        404: { content: { 'application/json': { schema: ErrorResponseSchema } }, description: 'Not found' }
+        200: {
+            content: { 'application/json': { schema: SuccessResponseSchema(EpisodeDetailSchema) } },
+            description: 'Stream and download links'
+        },
+        404: {
+            content: { 'application/json': { schema: ErrorResponseSchema } },
+            description: 'Not found'
+        }
     }
 })
 
@@ -189,7 +246,13 @@ export const getBatchDetailRoute = createRoute({
         params: z.object({ slug: z.string() })
     },
     responses: {
-        200: { content: { 'application/json': { schema: SuccessResponseSchema(BatchSchema) } }, description: 'Batch download info' },
-        404: { content: { 'application/json': { schema: ErrorResponseSchema } }, description: 'Not found' }
+        200: {
+            content: { 'application/json': { schema: SuccessResponseSchema(BatchSchema) } },
+            description: 'Batch download info'
+        },
+        404: {
+            content: { 'application/json': { schema: ErrorResponseSchema } },
+            description: 'Not found'
+        }
     }
 })

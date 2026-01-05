@@ -1,10 +1,8 @@
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { scrapeEpisodeDetail } from '../scrapers/otakudesu'
 import { getCachedData, AppError } from '../lib/utils'
-import { getEpisodeDetailRoute } from '../routeDefs'
 
 export class EpisodeController {
-
     static getEpisodeDetail = async (c: any) => {
         const slug = c.req.valid('param').slug
         const key = `v1_episode_${slug}`

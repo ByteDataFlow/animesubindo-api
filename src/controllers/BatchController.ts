@@ -1,10 +1,8 @@
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { scrapeBatch } from '../scrapers/otakudesu'
 import { getCachedData, AppError } from '../lib/utils'
-import { getBatchDetailRoute } from '../routeDefs'
 
 export class BatchController {
-
     static getBatch = async (c: any) => {
         const slug = c.req.valid('param').slug
         const key = `v1_batch_${slug}`

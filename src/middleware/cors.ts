@@ -10,5 +10,5 @@ export const corsMiddleware = cors({
     allowMethods: ['GET', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
     exposeHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset'],
-    maxAge: 86400, // 24 hours
+    maxAge: 86400 // 24 hours
 })

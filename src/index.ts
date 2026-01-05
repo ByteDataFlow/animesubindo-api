@@ -25,11 +25,14 @@ app.use('/api/*', apiRateLimiter)
 app.onError(globalErrorHandler)
 
 app.notFound((c) => {
-    return c.json({
-        status: 'error',
-        message: 'Endpoint Not Found',
-        code: 'NOT_FOUND'
-    }, 404)
+    return c.json(
+        {
+            status: 'error',
+            message: 'Endpoint Not Found',
+            code: 'NOT_FOUND'
+        },
+        404
+    )
 })
 
 // --- Register Routes ---
@@ -45,7 +48,8 @@ app.doc('/doc', {
     info: {
         version: '1.0.0',
         title: 'Anime API Enterprise',
-        description: 'Enterprise-grade anime data aggregation service providing real-time metadata, streaming availability, and schedule synchronization.\n\n**System Capabilities:**\n- ⚡ **Low-Latency Edge Caching**\n- 🛡️ **Zod-Powered Request Validation**\n- 🔄 **Auto-Healing Fallback Strategy**\n\n\n---\n*Powered by Otakudesu.best Source Adapter*'
+        description:
+            'Enterprise-grade anime data aggregation service providing real-time metadata, streaming availability, and schedule synchronization.\n\n**System Capabilities:**\n- ⚡ **Low-Latency Edge Caching**\n- 🛡️ **Zod-Powered Request Validation**\n- 🔄 **Auto-Healing Fallback Strategy**\n\n\n---\n*Powered by Otakudesu.best Source Adapter*'
     }
 })
 

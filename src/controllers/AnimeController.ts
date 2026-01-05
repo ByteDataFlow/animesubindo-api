@@ -1,4 +1,4 @@
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
     scrapeHome,
     scrapeSearch,
@@ -9,21 +9,11 @@ import {
     scrapeCompleteAnime
 } from '../scrapers/otakudesu'
 import { getCachedData, AppError } from '../lib/utils'
-import {
-    getHomeRoute,
-    searchRoute,
-    getAnimeDetailRoute,
-    getAnimeListRoute,
-    getScheduleRoute,
-    getOngoingRoute,
-    getCompletedRoute
-} from '../routeDefs'
 
 /**
  * Controller for Anime Related Enpoints
  */
 export class AnimeController {
-
     static getHome = async (c: any) => {
         const data = await getCachedData('v1_home', scrapeHome, 300)
         return c.json({ status: 'success', data }, 200)
