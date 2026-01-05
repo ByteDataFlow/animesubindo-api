@@ -21,8 +21,13 @@ export class ImageController {
                 responseType: 'stream',
                 headers: {
                     'User-Agent':
-                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                    Referer: 'https://otakudesu.best/'
+                        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    Referer: 'https://otakudesu.best/',
+                    Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Sec-Fetch-Dest': 'image',
+                    'Sec-Fetch-Mode': 'no-cors',
+                    'Sec-Fetch-Site': 'same-origin'
                 }
             })
 
@@ -32,15 +37,15 @@ export class ImageController {
             c.header('Cache-Control', 'public, max-age=86400')
 
             return stream(c, async (stream) => {
-                const pipe = response.data.pipe(stream)
-                await new Promise((resolve, reject) => {
-                    pipe.on('finish', resolve)
-                    pipe.on('error', reject)
-                })
+                const dataStream = response.data
+                // Manual piping to ensure compatibility with Hono stream helper
+                for await (const chunk of dataStream) {
+                    await stream.write(chunk)
+                }
+                await stream.close()
             })
         } catch (error: any) {
-            // console.error('Image Proxy Error:', error.message)
-            // Return placeholder or error
+            console.error('Image Proxy Error:', error.message)
             throw new AppError('Failed to fetch image', 502, 'UPSTREAM_ERROR')
         }
     }
