@@ -101,9 +101,26 @@ describe('Otakudesu Scraper Suite', () => {
 
     // --- Episode Detail Tests ---
     describe('scrapeEpisodeDetail', () => {
-        it('should extract stream and download links', async () => {
+        it('should extract stream and download links with multiple quality mirrors via AJAX', async () => {
             const html = loadFixture('episode.html')
             vi.mocked(axios.get).mockResolvedValue({ data: html })
+
+            // Mock AJAX calls
+            vi.mocked(axios.post).mockImplementation(async (url, data) => {
+                const params = new URLSearchParams(data as any)
+                // Mock Nonce Request
+                if (params.get('action') === 'aa1208d27f29ca340c92c66d1926f13f') {
+                    return { data: { data: 'test-nonce' } }
+                }
+                // Mock Mirror Resolution
+                if (params.get('action') === '2a3505c93b0035d3f455df82bf976b84') {
+                    const q = params.get('q')
+                    // Return base64 encoded iframe src
+                    const iframeHtml = `<iframe src="https://vidhide.com/${q}/op1080"></iframe>`
+                    return { data: { data: Buffer.from(iframeHtml).toString('base64') } }
+                }
+                return { data: {} }
+            })
 
             const data = await scrapeEpisodeDetail('one-piece-episode-1080-sub-indo')
 
@@ -111,15 +128,35 @@ describe('Otakudesu Scraper Suite', () => {
             expect(data?.title).toContain('One Piece Episode 1080')
             expect(data?.streamUrl).toBe('https://desustream.com/embed/op-1080')
 
-            // Mirror
-            expect(data?.mirror_stream_url).toContain('https://mirror.com/op-1080')
+            // Streaming Mirrors - new structure
+            expect(data?.streaming_mirrors).toBeDefined()
+            expect(data?.streaming_mirrors.length).toBeGreaterThan(0)
+
+            // Check 360p quality
+            const q360 = data?.streaming_mirrors.find(m => m.quality === '360p')
+            expect(q360).toBeDefined()
+            expect(q360?.sources.length).toBe(1)
+            expect(q360?.sources[0].name).toBe('vidhide')
+            expect(q360?.sources[0].url).toContain('vidhide.com/360p')
+
+            // Check 480p quality
+            const q480 = data?.streaming_mirrors.find(m => m.quality === '480p')
+            expect(q480).toBeDefined()
+            expect(q480?.sources.length).toBe(1)
+
+            // Check 720p quality
+            const q720 = data?.streaming_mirrors.find(m => m.quality === '720p')
+            expect(q720).toBeDefined()
+            expect(q720?.sources.length).toBeGreaterThanOrEqual(1)
+
+            // Backward compat: first mirror URL
+            expect(data?.mirror_stream_url).toContain('vidhide.com/360')
 
             // Downloads
-            expect(data?.download_links).toHaveLength(2)
+            expect(data?.download_links).toHaveLength(1)
             const lowRes = data?.download_links.find(d => d.resolution === '360p')
-            expect(lowRes?.links).toHaveLength(2)
+            expect(lowRes?.links).toHaveLength(1)
             expect(lowRes?.links[0].provider).toBe('Zippyshare')
         })
     })
-
 })

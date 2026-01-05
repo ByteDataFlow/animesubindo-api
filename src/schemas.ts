@@ -76,11 +76,26 @@ export const ScheduleSchema = z.object({
     animeList: z.array(AnimeListSchema)
 })
 
+export const StreamSourceSchema = z.object({
+    name: z.string().openapi({ example: 'vidhide' }),
+    url: z.string().openapi({ example: 'https://vidhide.com/e/abc123' })
+})
+
+export const StreamMirrorSchema = z.object({
+    quality: z.string().openapi({ example: '720p' }),
+    sources: z.array(StreamSourceSchema)
+})
+
 export const EpisodeDetailSchema = z
     .object({
         title: z.string(),
         streamUrl: z.string(),
-        mirror_stream_url: z.string(),
+        streaming_mirrors: z.array(StreamMirrorSchema).openapi({
+            description: 'All available streaming mirrors grouped by quality'
+        }),
+        mirror_stream_url: z.string().openapi({
+            description: 'First available mirror URL (backward compatibility)'
+        }),
         download_links: z.array(DownloadItemSchema)
     })
     .openapi('EpisodeDetail')

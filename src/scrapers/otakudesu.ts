@@ -71,11 +71,22 @@ export interface DownloadItem {
     links: DownloadLink[]
 }
 
+export interface StreamSource {
+    name: string
+    url: string
+}
+
+export interface StreamMirror {
+    quality: string
+    sources: StreamSource[]
+}
+
 export interface ScrapedEpisodeDetail {
     title: string
     streamUrl: string
+    streaming_mirrors: StreamMirror[]
     download_links: DownloadItem[]
-    mirror_stream_url: string
+    mirror_stream_url: string // Backward compatibility - first available mirror
 }
 
 export interface ScrapedBatch {
@@ -98,6 +109,12 @@ export interface ScrapedBatch {
         slug: string
         link: string
     }[]
+}
+
+export interface AjaxMirrorPayload {
+    id: number
+    i: number
+    q: string
 }
 
 /**
@@ -582,32 +599,74 @@ export async function scrapeEpisodeDetail(slug: string): Promise<ScrapedEpisodeD
 
         let mirror_stream_url = ''
 
-        const mirrors: string[] = []
-        $('.mirrorstream .m360p ul li').each((i, el) => {
-            const content = $(el).find('a').attr('data-content')
-            if (content) {
-                try {
-                    const decoded = Buffer.from(content, 'base64').toString('utf-8')
-                    const match = decoded.match(/src="([^"]+)"/)
-                    if (match && match[1]) {
-                        mirrors.push(match[1])
+        // Extract streaming mirrors for all quality levels
+        const streaming_mirrors: StreamMirror[] = []
+        const qualitySelectors = [
+            { selector: '.m360p', quality: '360p' },
+            { selector: '.m480p', quality: '480p' },
+            { selector: '.m720p', quality: '720p' },
+            { selector: '.m1080p', quality: '1080p' }
+        ]
+
+        // 1. Fetch Nonce first (needed for all mirrors)
+        const nonce = await getNonce()
+
+        for (const { selector, quality } of qualitySelectors) {
+            const rawSources: { name: string; payload: AjaxMirrorPayload }[] = []
+
+            // 2. Extract payloads
+            // Selector fix: The quality class (e.g., .m360p) is on the <ul> itself, not a wrapper div
+            $(`.mirrorstream ${selector} li`).each((_i, el) => {
+                const name = $(el).find('a').text().trim()
+                const content = $(el).find('a').attr('data-content')
+                if (content) {
+                    let decoded = ''
+                    try {
+                        decoded = Buffer.from(content, 'base64').toString('utf-8')
+                        // Try to parse as JSON first (new format)
+                        const payload = JSON.parse(decoded) as AjaxMirrorPayload
+                        rawSources.push({ name, payload })
+                    } catch (_e) {
+                        // Fallback for old style simple src="..." (unlikely but safe)
+                        if (decoded && decoded.includes('src="')) {
+                            const match = decoded.match(/src="([^"]+)"/)
+                            if (match && match[1]) {
+                                // Used to push directly, now we handle differently or ignore
+                                // For now, let's ignore mixed types or assume JSON is the way
+                            }
+                        }
                     }
-                } catch (_e) {
-                    /* ignore */
+                }
+            })
+
+            // 3. Resolve URLs in parallel (Ajax)
+            if (rawSources.length > 0 && nonce) {
+                const resolvedSources = await Promise.all(
+                    rawSources.map(async (src) => {
+                        const url = await resolveAjaxMirror(src.payload, nonce)
+                        return url ? { name: src.name, url } : null
+                    })
+                )
+
+                const validSources = resolvedSources.filter((s): s is StreamSource => s !== null)
+
+                if (validSources.length > 0) {
+                    streaming_mirrors.push({ quality, sources: validSources })
+                    // Set backward-compatible mirror_stream_url
+                    if (!mirror_stream_url && validSources[0]?.url) {
+                        mirror_stream_url = validSources[0].url
+                    }
                 }
             }
-        })
-        if (mirrors.length > 0) {
-            mirror_stream_url = mirrors[0]
         }
 
         const download_links: DownloadItem[] = []
-        $('.download ul li').each((i, el) => {
+        $('.download ul li').each((_i, el) => {
             const resolution = $(el).find('strong').text().trim()
             const links: DownloadLink[] = []
             $(el)
                 .find('a')
-                .each((j, a) => {
+                .each((_j, a) => {
                     const provider = $(a).text().trim()
                     const dUrl = $(a).attr('href')
                     if (provider && dUrl) {
@@ -619,7 +678,7 @@ export async function scrapeEpisodeDetail(slug: string): Promise<ScrapedEpisodeD
             }
         })
 
-        return { title, streamUrl, download_links, mirror_stream_url }
+        return { title, streamUrl, streaming_mirrors, download_links, mirror_stream_url }
     } catch (error) {
         console.error('Scraping Episode Detail Error:', error)
         return null
@@ -853,6 +912,61 @@ export async function scrapeBatch(slug: string): Promise<ScrapedBatch | null> {
         }
     } catch (error) {
         console.error('Scraping Batch Error:', error)
+        return null
+    }
+}
+
+// --- Helper Functions for AJAX Mirror Resolution ---
+
+async function getNonce(): Promise<string | null> {
+    try {
+        const { data } = await axios.post(
+            `${BASE_URL}/wp-admin/admin-ajax.php`,
+            new URLSearchParams({ action: 'aa1208d27f29ca340c92c66d1926f13f' }),
+            {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            }
+        )
+        return data.data || null
+    } catch (_e) {
+        return null
+    }
+}
+
+async function resolveAjaxMirror(
+    payload: AjaxMirrorPayload,
+    nonce: string
+): Promise<string | null> {
+    try {
+        const postData = {
+            id: payload.id.toString(),
+            i: payload.i.toString(),
+            q: payload.q,
+            nonce,
+            action: '2a3505c93b0035d3f455df82bf976b84'
+        }
+
+        const { data } = await axios.post(
+            `${BASE_URL}/wp-admin/admin-ajax.php`,
+            new URLSearchParams(postData),
+            {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            }
+        )
+
+        const encodedHtml = data.data
+        if (!encodedHtml) return null
+
+        const decodedHtml = Buffer.from(encodedHtml, 'base64').toString('utf-8')
+        const match = decodedHtml.match(/src="([^"]+)"/)
+        return match ? match[1] : null
+    } catch (_e) {
         return null
     }
 }
