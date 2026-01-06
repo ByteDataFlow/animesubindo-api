@@ -6,7 +6,8 @@ import {
     scrapeAnimeList,
     scrapeSchedule,
     scrapeOngoing,
-    scrapeCompleteAnime
+    scrapeCompleteAnime,
+    scrapeLengkap
 } from '../scrapers/otakudesu'
 import { getCachedData, AppError } from '../lib/utils'
 
@@ -55,6 +56,14 @@ export class AnimeController {
         const page = c.req.valid('query').page
         const key = `v1_complete_${page}`
         const data = await getCachedData(key, () => scrapeCompleteAnime(page), 3600)
+        return c.json({ status: 'success', data }, 200)
+    }
+
+    static getLengkap = async (c: any) => {
+        const slug = c.req.valid('param').slug
+        const key = `v1_lengkap_${slug}`
+        const data = await getCachedData(key, () => scrapeLengkap(slug), 1800)
+        if (!data) throw new AppError('Lengkap page not found', 404, 'NOT_FOUND')
         return c.json({ status: 'success', data }, 200)
     }
 }

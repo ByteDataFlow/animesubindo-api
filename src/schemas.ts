@@ -59,6 +59,8 @@ export const AnimeDetailSchema = z
         image: z.string(),
         release_date: z.string().optional(),
         episodes: z.array(EpisodeSchema),
+        batch_links: z.array(EpisodeSchema).optional(),
+        lengkap_links: z.array(EpisodeSchema).optional(),
         genres: z.array(GenreSchema).optional()
     })
     .openapi('AnimeDetail')
@@ -141,3 +143,25 @@ export const ErrorResponseSchema = z
         code: z.string().openapi({ example: 'NOT_FOUND' })
     })
     .openapi('AppError')
+
+export const LengkapSchema = z
+    .object({
+        title: z.string(),
+        japanese: z.string().optional(),
+        score: z.string().optional(),
+        producers: z.string().optional(),
+        type: z.string().optional(),
+        total_episode: z.string().optional(),
+        duration: z.string().optional(),
+        image: z.string().optional(),
+        release_date: z.string().optional(),
+        episodes: z.array(z.object({
+            title: z.string(),
+            downloadUrls: z.array(DownloadItemSchema)
+        })),
+        batch: z.object({
+            title: z.string(),
+            downloadUrls: z.array(DownloadItemSchema)
+        }).optional()
+    })
+    .openapi('Lengkap')

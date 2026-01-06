@@ -9,7 +9,8 @@ import {
     ScheduleSchema,
     GenreSchema,
     EpisodeDetailSchema,
-    BatchSchema
+    BatchSchema,
+    LengkapSchema
 } from './schemas'
 
 // --- Anime Routes ---
@@ -253,6 +254,25 @@ export const getBatchDetailRoute = createRoute({
         404: {
             content: { 'application/json': { schema: ErrorResponseSchema } },
             description: 'Not found'
+        }
+    }
+})
+
+export const getLengkapRoute = createRoute({
+    method: 'get',
+    path: '/api/lengkap/{slug}',
+    summary: 'Get Anime Lengkap (Aggregated)',
+    request: {
+        params: z.object({ slug: z.string() })
+    },
+    responses: {
+        200: {
+            content: { 'application/json': { schema: SuccessResponseSchema(LengkapSchema) } },
+            description: 'Lengkap details'
+        },
+        404: {
+            content: { 'application/json': { schema: ErrorResponseSchema } },
+            description: 'Not Found'
         }
     }
 })

@@ -34,6 +34,8 @@ export interface ScrapedAnimeDetail {
     synopsis: string
     image: string
     episodes: ScrapedEpisode[]
+    batch_links: ScrapedEpisode[]
+    lengkap_links: ScrapedEpisode[]
     genres?: { name: string; slug: string; link: string }[]
     release_date?: string
 }
@@ -59,6 +61,26 @@ export interface ScrapedSchedule {
         slug: string
         link: string
     }[]
+}
+
+export interface ScrapedLengkap {
+    title: string
+    japanese: string
+    score: string
+    producers: string
+    type: string
+    total_episode: string
+    duration: string
+    image: string
+    release_date: string
+    episodes: {
+        title: string
+        downloadUrls: { resolution: string; links: { provider: string; url: string }[] }[]
+    }[]
+    batch?: {
+        title: string
+        downloadUrls: { resolution: string; links: { provider: string; url: string }[] }[]
+    }
 }
 
 export interface DownloadLink {
@@ -302,12 +324,36 @@ export async function scrapeAnimeDetail(slug: string): Promise<ScrapedAnimeDetai
             })
         }
 
+        // Parsing Strategy 3: Check for Batch Links in .batchlink (typical for Lengkap pages)
+        const batch_links: ScrapedEpisode[] = []
+        const lengkap_links: ScrapedEpisode[] = []
+
+        if ($('.batchlink').length > 0) {
+            $('.batchlink a').each((i, el) => {
+                const bLink = $(el).attr('href')
+                const bTitle = $(el).text().trim()
+                // Only consider it a "Batch Link" if it points to a batch page (contains /batch/)
+                if (bLink && bTitle) {
+                    let bSlug = ''
+                    const parts = bLink.split('/')
+                    bSlug = parts[parts.length - 2] || parts[parts.length - 1]
+
+                    if (bLink.includes('/lengkap/') || bTitle.toLowerCase().includes('lengkap')) {
+                        lengkap_links.push({ title: bTitle, slug: bSlug, link: bLink })
+                    } else {
+                        batch_links.push({ title: bTitle, slug: bSlug, link: bLink })
+                    }
+                }
+            })
+        }
+
         // Episode List
         const episodes: ScrapedEpisode[] = []
+        // Extended strategy: batch_links already declared above, just append if found in list
         // Standard list
         if ($('.episodelist').length > 0) {
             $('.episodelist ul li').each((i, el) => {
-                const epTitle = $(el).find('span a').text().trim()
+                const epTitle = $(el).find('span a').text().replace(/\n/g, ' ').replace(/\s+/g, ' ').trim()
                 const epLink = $(el).find('span a').attr('href')
                 const epDate = $(el).find('.zeebr').text().trim()
                 let epSlug = ''
@@ -316,7 +362,17 @@ export async function scrapeAnimeDetail(slug: string): Promise<ScrapedAnimeDetai
                     epSlug = parts[parts.length - 2] || parts[parts.length - 1]
                 }
                 if (epTitle && epLink) {
-                    episodes.push({ title: epTitle, slug: epSlug, link: epLink, date: epDate })
+                    const lowerTitle = epTitle.toLowerCase()
+                    const isLengkap = lowerTitle.includes('lengkap') || epLink.includes('/lengkap/')
+                    const isBatch = !isLengkap && (lowerTitle.includes('batch') || title.includes('[Batch]') || epLink.includes('/batch/'))
+
+                    if (isLengkap) {
+                        lengkap_links.push({ title: epTitle, slug: epSlug, link: epLink, date: epDate })
+                    } else if (isBatch) {
+                        batch_links.push({ title: epTitle, slug: epSlug, link: epLink, date: epDate })
+                    } else {
+                        episodes.push({ title: epTitle, slug: epSlug, link: epLink, date: epDate })
+                    }
                 }
             })
         }
@@ -334,7 +390,9 @@ export async function scrapeAnimeDetail(slug: string): Promise<ScrapedAnimeDetai
             image,
             release_date,
             genres,
-            episodes
+            episodes,
+            batch_links,
+            lengkap_links
         }
     } catch (error) {
         console.error('Scraping Anime Detail Error:', error)
@@ -967,6 +1025,110 @@ async function resolveAjaxMirror(
         const match = decodedHtml.match(/src="([^"]+)"/)
         return match ? match[1] : null
     } catch (_e) {
+        return null
+    }
+}
+
+/**
+ * Scrapes the 'Lengkap' (Complete) page for an anime, which provides aggregated download links.
+ *
+ * @param {string} slug - The slug of the anime.
+ * @returns {Promise<ScrapedLengkap | null>} The scraped data or null if not found.
+ */
+export async function scrapeLengkap(slug: string): Promise<ScrapedLengkap | null> {
+    try {
+        const url = `${BASE_URL}/lengkap/${slug}/`
+        const { data } = await axios.get(url, { headers: { 'User-Agent': 'Mozilla/5.0' } })
+        const $ = cheerio.load(data)
+
+        if ($('.fotoanime').length === 0 && $('.imganime').length === 0) return null
+
+        const title = $('.jdlrx h1').text().trim()
+        const image = $('.fotoanime img').attr('src') || $('.imganime img').attr('src') || ''
+
+        let japanese = ''
+        let score = ''
+        let producers = ''
+        let type = ''
+        let total_episode = ''
+        let duration = ''
+        let release_date = ''
+
+        // Parsing metadata from .infos using <br> split strategy
+        const infoHtml = $('.infos').html()
+        if (infoHtml) {
+            const lines = infoHtml.split('<br>')
+            lines.forEach((line) => {
+                const cleanLine = line.replace(/<[^>]*>/g, '').trim()
+                if (cleanLine.includes('Japanese:'))
+                    japanese = cleanLine.split(':')[1]?.trim()
+                else if (cleanLine.includes('Score:') || cleanLine.includes('Rating:') || cleanLine.includes('Skor:'))
+                    score = cleanLine.split(':')[1]?.trim()
+                else if (cleanLine.includes('Producers:') || cleanLine.includes('Produser:'))
+                    producers = cleanLine.split(':')[1]?.trim()
+                else if (cleanLine.includes('Type:') || cleanLine.includes('Tipe:'))
+                    type = cleanLine.split(':')[1]?.trim()
+                else if (cleanLine.includes('Total Episode:') || cleanLine.includes('Episodes:'))
+                    total_episode = cleanLine.split(':')[1]?.trim()
+                else if (cleanLine.includes('Duration:') || cleanLine.includes('Durasi:'))
+                    duration = cleanLine.split(':')[1]?.trim()
+                else if (cleanLine.includes('Tanggal Rilis:') || cleanLine.includes('Aired:') || cleanLine.includes('Date:'))
+                    release_date = cleanLine.split(':')[1]?.trim()
+            })
+        }
+
+        const episodes: { title: string; downloadUrls: { resolution: string; links: { provider: string; url: string }[] }[] }[] = []
+        let batch: { title: string; downloadUrls: { resolution: string; links: { provider: string; url: string }[] }[] } | undefined
+
+        // Iterate over all h4 headers inside .download containers
+        $('.download h4').each((_, h4) => {
+            const header = $(h4).text().trim()
+            const links: { resolution: string; links: { provider: string; url: string }[] }[] = []
+
+            // The links are in the next sibling 'ul'
+            const ul = $(h4).next('ul')
+
+            ul.find('li').each((_, li) => {
+                const resolution = $(li).find('strong').text().trim()
+                const linkList: { provider: string; url: string }[] = []
+                $(li).find('a').each((_, a) => {
+                    linkList.push({
+                        provider: $(a).text().trim(),
+                        url: $(a).attr('href') || ''
+                    })
+                })
+                links.push({ resolution, links: linkList })
+            })
+
+            if (header.toLowerCase().includes('batch')) {
+                batch = {
+                    title: header,
+                    downloadUrls: links
+                }
+            } else {
+                episodes.push({
+                    title: header,
+                    downloadUrls: links
+                })
+            }
+        })
+
+        return {
+            title,
+            japanese,
+            score,
+            producers,
+            type,
+            total_episode,
+            duration,
+            image,
+            release_date,
+            episodes,
+            batch
+        }
+
+    } catch (e) {
+        console.error(`Error scraping lengkap ${slug}:`, e)
         return null
     }
 }

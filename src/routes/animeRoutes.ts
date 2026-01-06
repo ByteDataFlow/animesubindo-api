@@ -7,7 +7,8 @@ import {
     getAnimeListRoute,
     getScheduleRoute,
     getOngoingRoute,
-    getCompletedRoute
+    getCompletedRoute,
+    getLengkapRoute
 } from '../routeDefs'
 
 export const registerAnimeRoutes = (app: OpenAPIHono) => {
@@ -18,4 +19,5 @@ export const registerAnimeRoutes = (app: OpenAPIHono) => {
     app.openapi(getScheduleRoute, AnimeController.getSchedule)
     app.openapi(getOngoingRoute, AnimeController.getOngoing)
     app.openapi(getCompletedRoute, AnimeController.getCompleted)
+    app.openapi(getLengkapRoute, AnimeController.getLengkap)
 }
