@@ -663,7 +663,7 @@ export async function scrapeEpisodeDetail(slug: string): Promise<ScrapedEpisodeD
         const { data } = await axios.get(url)
         const $ = cheerio.load(data)
 
-        const title = $('.venz h1.posttl').text().trim()
+        const title = $('h1.posttl').text().trim()
         const streamUrl = $('.responsive-embed-stream iframe').attr('src') || ''
 
         // Extract streaming mirrors for all quality levels
