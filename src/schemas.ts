@@ -95,10 +95,19 @@ export const EpisodeDetailSchema = z
         streaming_mirrors: z.array(StreamMirrorSchema).openapi({
             description: 'All available streaming mirrors grouped by quality'
         }),
-        mirror_stream_url: z.string().openapi({
-            description: 'First available mirror URL (backward compatibility)'
-        }),
-        download_links: z.array(DownloadItemSchema)
+        download_links: z.array(DownloadItemSchema),
+        hasPrevEpisode: z.boolean(),
+        prevEpisode: z.object({
+            title: z.string(),
+            slug: z.string(),
+            url: z.string()
+        }).nullable(),
+        hasNextEpisode: z.boolean(),
+        nextEpisode: z.object({
+            title: z.string(),
+            slug: z.string(),
+            url: z.string()
+        }).nullable()
     })
     .openapi('EpisodeDetail')
 

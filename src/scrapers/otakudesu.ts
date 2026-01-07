@@ -108,7 +108,18 @@ export interface ScrapedEpisodeDetail {
     streamUrl: string
     streaming_mirrors: StreamMirror[]
     download_links: DownloadItem[]
-    mirror_stream_url: string // Backward compatibility - first available mirror
+    hasPrevEpisode: boolean
+    prevEpisode: {
+        title: string
+        slug: string
+        url: string
+    } | null
+    hasNextEpisode: boolean
+    nextEpisode: {
+        title: string
+        slug: string
+        url: string
+    } | null
 }
 
 export interface ScrapedBatch {
@@ -655,8 +666,6 @@ export async function scrapeEpisodeDetail(slug: string): Promise<ScrapedEpisodeD
         const title = $('.venz h1.posttl').text().trim()
         const streamUrl = $('.responsive-embed-stream iframe').attr('src') || ''
 
-        let mirror_stream_url = ''
-
         // Extract streaming mirrors for all quality levels
         const streaming_mirrors: StreamMirror[] = []
         const qualitySelectors = [
@@ -710,10 +719,6 @@ export async function scrapeEpisodeDetail(slug: string): Promise<ScrapedEpisodeD
 
                 if (validSources.length > 0) {
                     streaming_mirrors.push({ quality, sources: validSources })
-                    // Set backward-compatible mirror_stream_url
-                    if (!mirror_stream_url && validSources[0]?.url) {
-                        mirror_stream_url = validSources[0].url
-                    }
                 }
             }
         }
@@ -736,7 +741,44 @@ export async function scrapeEpisodeDetail(slug: string): Promise<ScrapedEpisodeD
             }
         })
 
-        return { title, streamUrl, streaming_mirrors, download_links, mirror_stream_url }
+
+        // Navigation links
+        const prevLink = $('.prevnext .flir a[title="Episode Sebelumnya"]')
+        const nextLink = $('.prevnext .flir a[title="Episode Selanjutnya"]')
+
+        let prevEpisode: { title: string; slug: string; url: string } | null = null
+        let nextEpisode: { title: string; slug: string; url: string } | null = null
+
+        if (prevLink.length > 0) {
+            const href = prevLink.attr('href') || ''
+            const slug = href.split('/').filter(Boolean).pop() || ''
+            prevEpisode = {
+                title: prevLink.attr('title') || 'Episode Sebelumnya',
+                slug,
+                url: href
+            }
+        }
+
+        if (nextLink.length > 0) {
+            const href = nextLink.attr('href') || ''
+            const slug = href.split('/').filter(Boolean).pop() || ''
+            nextEpisode = {
+                title: nextLink.attr('title') || 'Episode Selanjutnya',
+                slug,
+                url: href
+            }
+        }
+
+        return {
+            title,
+            streamUrl,
+            streaming_mirrors,
+            download_links,
+            hasPrevEpisode: prevEpisode !== null,
+            prevEpisode,
+            hasNextEpisode: nextEpisode !== null,
+            nextEpisode
+        }
     } catch (error) {
         console.error('Scraping Episode Detail Error:', error)
         return null

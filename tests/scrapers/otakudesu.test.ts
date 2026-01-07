@@ -199,14 +199,24 @@ describe('Otakudesu Scraper Suite', () => {
             expect(q720).toBeDefined()
             expect(q720?.sources.length).toBeGreaterThanOrEqual(1)
 
-            // Backward compat: first mirror URL
-            expect(data?.mirror_stream_url).toContain('vidhide.com/360')
-
             // Downloads
             expect(data?.download_links).toHaveLength(1)
             const lowRes = data?.download_links.find(d => d.resolution === '360p')
             expect(lowRes?.links).toHaveLength(1)
             expect(lowRes?.links[0].provider).toBe('Zippyshare')
+
+            // Navigation
+            expect(data?.hasPrevEpisode).toBe(true)
+            expect(data?.prevEpisode).not.toBeNull()
+            expect(data?.prevEpisode?.slug).toBe('one-piece-episode-1079-sub-indo')
+            expect(data?.prevEpisode?.title).toBe('Episode Sebelumnya')
+            expect(data?.prevEpisode?.url).toContain('one-piece-episode-1079-sub-indo')
+
+            expect(data?.hasNextEpisode).toBe(true)
+            expect(data?.nextEpisode).not.toBeNull()
+            expect(data?.nextEpisode?.slug).toBe('one-piece-episode-1081-sub-indo')
+            expect(data?.nextEpisode?.title).toBe('Episode Selanjutnya')
+            expect(data?.nextEpisode?.url).toContain('one-piece-episode-1081-sub-indo')
         })
     })
 
