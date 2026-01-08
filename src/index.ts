@@ -66,7 +66,7 @@ app.get('/ui', async (c) => {
         return c.html(html)
     } catch (_error) {
         // Fallback to default Swagger UI if custom file not found
-        return swaggerUI({ url: '/doc' })(c)
+        return c.redirect('/ui/default')
     }
 })
 
