@@ -3,6 +3,28 @@ import * as cheerio from 'cheerio'
 
 const BASE_URL = 'https://otakudesu.best'
 
+/**
+ * AJAX action hashes used by Otakudesu for mirror resolution
+ */
+const AJAX_ACTIONS = {
+    GET_NONCE: 'aa1208d27f29ca340c92c66d1926f13f',
+    RESOLVE_MIRROR: '2a3505c93b0035d3f455df82bf976b84'
+} as const
+
+/**
+ * CSS selectors for scraping Otakudesu pages
+ */
+const SELECTORS = {
+    EPISODE_TITLE: 'h1.posttl',
+    STREAM_IFRAME: '.responsive-embed-stream iframe',
+    PREV_EPISODE_LINK: '.prevnext .flir a[title="Episode Sebelumnya"]',
+    NEXT_EPISODE_LINK: '.prevnext .flir a[title="Episode Selanjutnya"]',
+    DOWNLOAD_LINKS: '.download ul li',
+    DOWNLOAD_RESOLUTION: 'strong',
+    DOWNLOAD_LINK: 'a'
+} as const
+
+
 export interface ScrapedAnime {
     title: string
     slug: string
@@ -651,6 +673,153 @@ export async function scrapeCompleteAnime(page: number = 1): Promise<ScrapedAnim
     }
 }
 
+// --- Episode Detail Helper Functions ---
+
+/**
+ * Extracts streaming mirrors for all quality levels from an episode page
+ * @param $ - Cheerio instance loaded with episode HTML
+ * @returns Array of streaming mirrors grouped by quality
+ */
+async function extractStreamingMirrors($: cheerio.CheerioAPI): Promise<StreamMirror[]> {
+    const streaming_mirrors: StreamMirror[] = []
+    const qualitySelectors = [
+        { selector: '.m360p', quality: '360p' },
+        { selector: '.m480p', quality: '480p' },
+        { selector: '.m720p', quality: '720p' },
+        { selector: '.m1080p', quality: '1080p' }
+    ]
+
+    // Fetch security nonce required for AJAX mirror resolution
+    const nonce = await getNonce()
+
+    for (const { selector, quality } of qualitySelectors) {
+        const rawSources: { name: string; payload: AjaxMirrorPayload }[] = []
+
+        // Extract mirror data from data-content attributes
+        // Each mirror link has a base64-encoded JSON payload containing {id, i, q}
+        $(`.mirrorstream ${selector} li`).each((_i, el) => {
+            const name = $(el).find('a').text().trim()
+            const content = $(el).find('a').attr('data-content')
+
+            if (content) {
+                try {
+                    // Decode base64 data-content to get mirror payload
+                    const decoded = Buffer.from(content, 'base64').toString('utf-8')
+                    // Parse JSON payload: {id: mirror_id, i: index, q: quality}
+                    const payload = JSON.parse(decoded) as AjaxMirrorPayload
+                    rawSources.push({ name, payload })
+                } catch (_e) {
+                    // Legacy fallback: some old mirrors may use iframe src format
+                    // This is rare, but we keep it for compatibility
+                    const decoded = Buffer.from(content, 'base64').toString('utf-8')
+                    if (decoded && decoded.includes('src="')) {
+                        const match = decoded.match(/src="([^"]+)"/)
+                        if (match && match[1]) {
+                            // Old format detected but not used - JSON is the standard now
+                        }
+                    }
+                }
+            }
+        })
+
+        // Resolve mirror URLs via AJAX in parallel
+        if (rawSources.length > 0 && nonce) {
+            const resolvedSources = await Promise.all(
+                rawSources.map(async (src) => {
+                    const url = await resolveAjaxMirror(src.payload, nonce)
+                    return url ? { name: src.name, url } : null
+                })
+            )
+
+            const validSources = resolvedSources.filter((s): s is StreamSource => s !== null)
+
+            if (validSources.length > 0) {
+                streaming_mirrors.push({ quality, sources: validSources })
+            }
+        }
+    }
+
+    return streaming_mirrors
+}
+
+/**
+ * Extracts download links from an episode page
+ * @param $ - Cheerio instance loaded with episode HTML
+ * @returns Array of download items grouped by resolution
+ */
+function extractDownloadLinks($: cheerio.CheerioAPI): DownloadItem[] {
+    const download_links: DownloadItem[] = []
+
+    // Each <li> represents a resolution group (360p, 480p, etc.)
+    $('.download ul li').each((_i, el) => {
+        const resolution = $(el).find('strong').text().trim()
+        const links: DownloadLink[] = []
+
+        // Extract all download providers for this resolution
+        $(el).find('a').each((_j, a) => {
+            const provider = $(a).text().trim()
+            const dUrl = $(a).attr('href')
+            if (provider && dUrl) {
+                links.push({ provider, url: dUrl })
+            }
+        })
+
+        if (resolution && links.length > 0) {
+            download_links.push({ resolution, links })
+        }
+    })
+
+    return download_links
+}
+
+/**
+ * Extracts navigation links to previous and next episodes
+ * @param $ - Cheerio instance loaded with episode HTML
+ * @returns Object containing prev/next episode data and availability flags
+ */
+function extractNavigationLinks($: cheerio.CheerioAPI): {
+    hasPrevEpisode: boolean
+    prevEpisode: { title: string; slug: string; url: string } | null
+    hasNextEpisode: boolean
+    nextEpisode: { title: string; slug: string; url: string } | null
+} {
+    const prevLink = $(SELECTORS.PREV_EPISODE_LINK)
+    const nextLink = $(SELECTORS.NEXT_EPISODE_LINK)
+
+    let prevEpisode: { title: string; slug: string; url: string } | null = null
+    let nextEpisode: { title: string; slug: string; url: string } | null = null
+
+    if (prevLink.length > 0) {
+        const href = prevLink.attr('href') || ''
+        // Extract slug from URL by splitting on '/' and taking the last segment
+        // Example: "https://otakudesu.best/episode/anime-ep-1-sub-indo/" → "anime-ep-1-sub-indo"
+        const slug = href.split('/').filter(Boolean).pop() || ''
+        prevEpisode = {
+            title: prevLink.attr('title') || 'Episode Sebelumnya',
+            slug,
+            url: href
+        }
+    }
+
+    if (nextLink.length > 0) {
+        const href = nextLink.attr('href') || ''
+        // Extract slug from URL (same logic as previous episode)
+        const slug = href.split('/').filter(Boolean).pop() || ''
+        nextEpisode = {
+            title: nextLink.attr('title') || 'Episode Selanjutnya',
+            slug,
+            url: href
+        }
+    }
+
+    return {
+        hasPrevEpisode: prevEpisode !== null,
+        prevEpisode,
+        hasNextEpisode: nextEpisode !== null,
+        nextEpisode
+    }
+}
+
 /**
  * Scrapes detail for a specific episode, including streaming mirrors and download links.
  *
@@ -663,121 +832,25 @@ export async function scrapeEpisodeDetail(slug: string): Promise<ScrapedEpisodeD
         const { data } = await axios.get(url)
         const $ = cheerio.load(data)
 
-        const title = $('h1.posttl').text().trim()
-        const streamUrl = $('.responsive-embed-stream iframe').attr('src') || ''
+        // Extract basic episode metadata
+        const title = $(SELECTORS.EPISODE_TITLE).text().trim()
+        const streamUrl = $(SELECTORS.STREAM_IFRAME).attr('src') || ''
 
-        // Extract streaming mirrors for all quality levels
-        const streaming_mirrors: StreamMirror[] = []
-        const qualitySelectors = [
-            { selector: '.m360p', quality: '360p' },
-            { selector: '.m480p', quality: '480p' },
-            { selector: '.m720p', quality: '720p' },
-            { selector: '.m1080p', quality: '1080p' }
-        ]
+        // Extract streaming mirrors (with AJAX resolution)
+        const streaming_mirrors = await extractStreamingMirrors($)
 
-        // 1. Fetch Nonce first (needed for all mirrors)
-        const nonce = await getNonce()
+        // Extract download links
+        const download_links = extractDownloadLinks($)
 
-        for (const { selector, quality } of qualitySelectors) {
-            const rawSources: { name: string; payload: AjaxMirrorPayload }[] = []
-
-            // 2. Extract payloads
-            // Selector fix: The quality class (e.g., .m360p) is on the <ul> itself, not a wrapper div
-            $(`.mirrorstream ${selector} li`).each((_i, el) => {
-                const name = $(el).find('a').text().trim()
-                const content = $(el).find('a').attr('data-content')
-                if (content) {
-                    let decoded = ''
-                    try {
-                        decoded = Buffer.from(content, 'base64').toString('utf-8')
-                        // Try to parse as JSON first (new format)
-                        const payload = JSON.parse(decoded) as AjaxMirrorPayload
-                        rawSources.push({ name, payload })
-                    } catch (_e) {
-                        // Fallback for old style simple src="..." (unlikely but safe)
-                        if (decoded && decoded.includes('src="')) {
-                            const match = decoded.match(/src="([^"]+)"/)
-                            if (match && match[1]) {
-                                // Used to push directly, now we handle differently or ignore
-                                // For now, let's ignore mixed types or assume JSON is the way
-                            }
-                        }
-                    }
-                }
-            })
-
-            // 3. Resolve URLs in parallel (Ajax)
-            if (rawSources.length > 0 && nonce) {
-                const resolvedSources = await Promise.all(
-                    rawSources.map(async (src) => {
-                        const url = await resolveAjaxMirror(src.payload, nonce)
-                        return url ? { name: src.name, url } : null
-                    })
-                )
-
-                const validSources = resolvedSources.filter((s): s is StreamSource => s !== null)
-
-                if (validSources.length > 0) {
-                    streaming_mirrors.push({ quality, sources: validSources })
-                }
-            }
-        }
-
-        const download_links: DownloadItem[] = []
-        $('.download ul li').each((_i, el) => {
-            const resolution = $(el).find('strong').text().trim()
-            const links: DownloadLink[] = []
-            $(el)
-                .find('a')
-                .each((_j, a) => {
-                    const provider = $(a).text().trim()
-                    const dUrl = $(a).attr('href')
-                    if (provider && dUrl) {
-                        links.push({ provider, url: dUrl })
-                    }
-                })
-            if (resolution && links.length > 0) {
-                download_links.push({ resolution, links })
-            }
-        })
-
-
-        // Navigation links
-        const prevLink = $('.prevnext .flir a[title="Episode Sebelumnya"]')
-        const nextLink = $('.prevnext .flir a[title="Episode Selanjutnya"]')
-
-        let prevEpisode: { title: string; slug: string; url: string } | null = null
-        let nextEpisode: { title: string; slug: string; url: string } | null = null
-
-        if (prevLink.length > 0) {
-            const href = prevLink.attr('href') || ''
-            const slug = href.split('/').filter(Boolean).pop() || ''
-            prevEpisode = {
-                title: prevLink.attr('title') || 'Episode Sebelumnya',
-                slug,
-                url: href
-            }
-        }
-
-        if (nextLink.length > 0) {
-            const href = nextLink.attr('href') || ''
-            const slug = href.split('/').filter(Boolean).pop() || ''
-            nextEpisode = {
-                title: nextLink.attr('title') || 'Episode Selanjutnya',
-                slug,
-                url: href
-            }
-        }
+        // Extract navigation links (prev/next episode)
+        const navigation = extractNavigationLinks($)
 
         return {
             title,
             streamUrl,
             streaming_mirrors,
             download_links,
-            hasPrevEpisode: prevEpisode !== null,
-            prevEpisode,
-            hasNextEpisode: nextEpisode !== null,
-            nextEpisode
+            ...navigation
         }
     } catch (error) {
         console.error('Scraping Episode Detail Error:', error)
@@ -1022,7 +1095,7 @@ async function getNonce(): Promise<string | null> {
     try {
         const { data } = await axios.post(
             `${BASE_URL}/wp-admin/admin-ajax.php`,
-            new URLSearchParams({ action: 'aa1208d27f29ca340c92c66d1926f13f' }),
+            new URLSearchParams({ action: AJAX_ACTIONS.GET_NONCE }),
             {
                 headers: {
                     'User-Agent': 'Mozilla/5.0',
@@ -1046,7 +1119,7 @@ async function resolveAjaxMirror(
             i: payload.i.toString(),
             q: payload.q,
             nonce,
-            action: '2a3505c93b0035d3f455df82bf976b84'
+            action: AJAX_ACTIONS.RESOLVE_MIRROR
         }
 
         const { data } = await axios.post(

@@ -63,7 +63,7 @@ export const getAnimeDetailRoute = createRoute({
     path: '/api/anime/{slug}',
     summary: 'Get Anime Details',
     request: {
-        params: z.object({ slug: z.string() })
+        params: z.object({ slug: z.string().openapi({ example: 'sozai-isekai-ryokouki-sub-indo' }) })
     },
     responses: {
         200: {
@@ -174,7 +174,7 @@ export const getAnimeByGenreRoute = createRoute({
     path: '/api/genres/{slug}',
     summary: 'Get Anime by Genre',
     request: {
-        params: z.object({ slug: z.string() }),
+        params: z.object({ slug: z.string().openapi({ example: 'action' }) }),
         query: z.object({
             page: z
                 .string()
@@ -223,7 +223,7 @@ export const getEpisodeDetailRoute = createRoute({
     path: '/api/episode/{slug}',
     summary: 'Get Episode Details',
     request: {
-        params: z.object({ slug: z.string() })
+        params: z.object({ slug: z.string().openapi({ example: 'ssnir-episode-1-sub-indo' }) })
     },
     responses: {
         200: {
@@ -244,7 +244,7 @@ export const getBatchDetailRoute = createRoute({
     path: '/api/batch/{slug}',
     summary: 'Get Batch Downloads',
     request: {
-        params: z.object({ slug: z.string() })
+        params: z.object({ slug: z.string().openapi({ example: 'ssnir-batch-sub-indo' }) })
     },
     responses: {
         200: {
@@ -263,7 +263,7 @@ export const getLengkapRoute = createRoute({
     path: '/api/lengkap/{slug}',
     summary: 'Get Anime Lengkap (Aggregated)',
     request: {
-        params: z.object({ slug: z.string() })
+        params: z.object({ slug: z.string().openapi({ example: 'ssnir-sub-indo' }) })
     },
     responses: {
         200: {

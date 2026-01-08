@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Subindo API - Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+    <link rel="stylesheet" href="/swagger-custom.css">
+    <style>
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Custom header with logo */
+        #custom-header {
+            background: linear-gradient(135deg, #0A1628 0%, #1A2841 100%);
+            border-bottom: 2px solid #00D9FF;
+            padding: 24px 48px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        #custom-header .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        #custom-header img {
+            height: 56px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 217, 255, 0.25);
+        }
+
+        #custom-header .title-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #custom-header h1 {
+            margin: 0;
+            color: #00D9FF;
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+            text-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+        }
+
+        #custom-header .badges {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        #custom-header .version-badge {
+            background: linear-gradient(135deg, #00D9FF 0%, #4A9FFF 100%);
+            color: #0A1628;
+            padding: 5px 14px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            box-shadow: 0 2px 8px rgba(0, 217, 255, 0.2);
+        }
+
+        #custom-header .oas-badge {
+            background: #FF9B5A;
+            color: #0A1628;
+            padding: 5px 14px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            box-shadow: 0 2px 8px rgba(255, 155, 90, 0.2);
+        }
+
+        /* Hide default Swagger topbar */
+        .swagger-ui .topbar {
+            display: none !important;
+        }
+
+        /* Content wrapper */
+        .swagger-ui .wrapper {
+            padding: 32px 48px !important;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Info section spacing */
+        .swagger-ui .info {
+            margin: 32px 0 !important;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Custom Header with Logo -->
+    <div id="custom-header">
+        <div class="logo-section">
+            <img src="/assets/logo.jpg" alt="Anime Subindo API Logo">
+            <div class="title-group">
+                <h1>Anime Subindo API</h1>
+                <div class="badges">
+                    <span class="version-badge">v1.0.0</span>
+                    <span class="oas-badge">OAS 3.0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Swagger UI Container -->
+    <div id="swagger-ui"></div>
+
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function () {
+            window.ui = SwaggerUIBundle({
+                url: '/doc',
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout",
+                defaultModelsExpandDepth: 1,
+                defaultModelExpandDepth: 1,
+                docExpansion: 'list',
+                filter: true,
+                showExtensions: true,
+                showCommonExtensions: true,
+                tryItOutEnabled: true
+            });
+        };
+    </script>
+</body>
+
+</html>

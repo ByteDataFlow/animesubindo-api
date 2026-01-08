@@ -1,0 +1,457 @@
+/* 
+ * Custom Swagger UI Theme - Anime Subindo API
+ * Brand Colors from Logo:
+ * - Primary Cyan: #00D9FF
+ * - Secondary Blue: #4A9FFF  
+ * - Dark Navy: #0A1628
+ * - Accent Orange: #FF9B5A
+ */
+
+/* Base Dark Theme */
+body {
+    background: #0A1628 !important;
+}
+
+.swagger-ui {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Top Bar - Custom branded header */
+.swagger-ui .topbar {
+    background: linear-gradient(135deg, #0A1628 0%, #1A2841 100%) !important;
+    border-bottom: 2px solid #00D9FF !important;
+    padding: 15px 0 !important;
+}
+
+.swagger-ui .topbar .download-url-wrapper {
+    display: none !important;
+}
+
+/* Logo styling */
+.swagger-ui .topbar-wrapper img {
+    max-height: 50px !important;
+    border-radius: 8px;
+}
+
+.swagger-ui .topbar-wrapper .link {
+    max-width: 200px !important;
+}
+
+/* Info Section - Title and Description */
+.swagger-ui .info {
+    margin: 30px 0 !important;
+}
+
+.swagger-ui .info .title {
+    color: #00D9FF !important;
+    font-size: 36px !important;
+    font-weight: 700 !important;
+    text-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+}
+
+.swagger-ui .info .description {
+    color: #E0E0E0 !important;
+    font-size: 16px !important;
+}
+
+/* Hide duplicate version badges in info section */
+.swagger-ui .info .title small {
+    display: none !important;
+}
+
+/* Main wrapper - dark background */
+.swagger-ui .wrapper {
+    background: #0F1F2E !important;
+    padding: 20px !important;
+}
+
+/* Operation blocks - endpoints */
+.swagger-ui .opblock {
+    background: #1A2841 !important;
+    border: 1px solid #2A3851 !important;
+    border-radius: 8px !important;
+    margin-bottom: 15px !important;
+}
+
+.swagger-ui .opblock:hover {
+    border-color: #00D9FF !important;
+    box-shadow: 0 4px 20px rgba(0, 217, 255, 0.15) !important;
+}
+
+/* HTTP Method Tags */
+.swagger-ui .opblock.opblock-get {
+    border-color: #00D9FF !important;
+}
+
+.swagger-ui .opblock.opblock-get .opblock-summary-method {
+    background: #00D9FF !important;
+    color: #0A1628 !important;
+    font-weight: 600 !important;
+}
+
+.swagger-ui .opblock.opblock-post .opblock-summary-method {
+    background: #4ECB71 !important;
+    color: #0A1628 !important;
+    font-weight: 600 !important;
+}
+
+.swagger-ui .opblock.opblock-put .opblock-summary-method {
+    background: #FF9B5A !important;
+    color: #0A1628 !important;
+    font-weight: 600 !important;
+}
+
+.swagger-ui .opblock.opblock-delete .opblock-summary-method {
+    background: #FF5A5A !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+}
+
+/* Summary path - Make endpoints more visible */
+.swagger-ui .opblock-summary-path {
+    color: #FFFFFF !important;
+    font-family: 'Courier New', monospace !important;
+    font-weight: 500 !important;
+}
+
+.swagger-ui .opblock-summary-description {
+    color: #B0B0B0 !important;
+}
+
+/* Expanded operation */
+.swagger-ui .opblock-body {
+    background: #0F1F2E !important;
+}
+
+.swagger-ui .opblock-section-header {
+    background: #1A2841 !important;
+    border-bottom: 1px solid #2A3851 !important;
+}
+
+.swagger-ui .opblock-section-header h4 {
+    color: #00D9FF !important;
+}
+
+/* Parameters */
+.swagger-ui .parameters-col_description {
+    color: #E0E0E0 !important;
+}
+
+.swagger-ui .parameter__name {
+    color: #00D9FF !important;
+    font-weight: 600 !important;
+}
+
+.swagger-ui .parameter__type {
+    color: #4A9FFF !important;
+}
+
+/* Buttons */
+.swagger-ui .btn {
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+}
+
+.swagger-ui .btn.execute {
+    background: linear-gradient(135deg, #00D9FF 0%, #4A9FFF 100%) !important;
+    border: none !important;
+    color: #0A1628 !important;
+    box-shadow: 0 4px 15px rgba(0, 217, 255, 0.3) !important;
+}
+
+.swagger-ui .btn.execute:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(0, 217, 255, 0.4) !important;
+}
+
+.swagger-ui .btn.authorize {
+    background: #FF9B5A !important;
+    border-color: #FF9B5A !important;
+    color: #fff !important;
+}
+
+.swagger-ui .btn.cancel {
+    background: #2A3851 !important;
+    border-color: #2A3851 !important;
+    color: #E0E0E0 !important;
+}
+
+/* Input fields */
+.swagger-ui input[type="text"],
+.swagger-ui select,
+.swagger-ui textarea {
+    background: #1A2841 !important;
+    border: 1px solid #2A3851 !important;
+    color: #E0E0E0 !important;
+    border-radius: 6px !important;
+}
+
+.swagger-ui input[type="text"]:focus,
+.swagger-ui select:focus,
+.swagger-ui textarea:focus {
+    border-color: #00D9FF !important;
+    box-shadow: 0 0 0 2px rgba(0, 217, 255, 0.1) !important;
+}
+
+/* Filter by tag input - make it more visible */
+.swagger-ui .filter-container input {
+    background: #1A2841 !important;
+    border: 2px solid #00D9FF !important;
+    color: #FFFFFF !important;
+    padding: 12px 16px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    transition: all 0.3s ease !important;
+}
+
+.swagger-ui .filter-container input::placeholder {
+    color: #7A8A9A !important;
+    opacity: 1 !important;
+}
+
+.swagger-ui .filter-container input:focus {
+    border-color: #00D9FF !important;
+    box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.15) !important;
+    background: #223548 !important;
+}
+
+/* Response section */
+.swagger-ui .responses-wrapper {
+    background: #0F1F2E !important;
+    border-radius: 8px !important;
+    padding: 15px !important;
+}
+
+.swagger-ui .response-col_status {
+    color: #00D9FF !important;
+    font-weight: 600 !important;
+}
+
+.swagger-ui .response-col_description {
+    color: #E0E0E0 !important;
+}
+
+/* Code blocks */
+.swagger-ui .highlight-code {
+    background: #0A1628 !important;
+    border-radius: 6px !important;
+}
+
+.swagger-ui .microlight {
+    color: #E0E0E0 !important;
+}
+
+/* JSON Schema - Comprehensive UX Improvements */
+.swagger-ui .model-box {
+    background: #1A2841 !important;
+    border-radius: 8px !important;
+    border: 1px solid #2A3851 !important;
+    transition: all 0.3s ease !important;
+}
+
+.swagger-ui .model-box:hover {
+    border-color: #00D9FF !important;
+    box-shadow: 0 2px 12px rgba(0, 217, 255, 0.1) !important;
+}
+
+.swagger-ui .model {
+    color: #E0E0E0 !important;
+}
+
+/* Model Title - Reduce bottom border thickness */
+.swagger-ui .model-title {
+    color: #00D9FF !important;
+    font-weight: 600 !important;
+    font-size: 16px !important;
+    padding: 12px 16px !important;
+    border-bottom: 2px solid #00D9FF !important;
+    background: linear-gradient(135deg, rgba(0, 217, 255, 0.05) 0%, rgba(74, 159, 255, 0.05) 100%) !important;
+    transition: all 0.3s ease !important;
+}
+
+/* Property rows - Better spacing and hierarchy */
+.swagger-ui .property-row {
+    border-bottom: 1px solid #2A3851 !important;
+    padding: 16px 20px !important;
+    line-height: 2 !important;
+    transition: background 0.2s ease !important;
+}
+
+.swagger-ui .property-row:hover {
+    background: rgba(0, 217, 255, 0.03) !important;
+}
+
+/* Property names - Keep white */
+.swagger-ui .model .property {
+    color: #FFFFFF !important;
+    font-weight: 500 !important;
+}
+
+/* Property types - Muted color for better hierarchy */
+.swagger-ui .model .prop-type {
+    color: #7A9FFF !important;
+    font-weight: 400 !important;
+    opacity: 0.9 !important;
+    display: inline !important;
+    margin-left: 8px !important;
+}
+
+/* Required field indicator - High contrast red with spacing */
+.swagger-ui .model .required {
+    color: #FF5A5A !important;
+    font-weight: 700 !important;
+    text-shadow: 0 0 4px rgba(255, 90, 90, 0.3) !important;
+    margin-left: 3px !important;
+    margin-right: 2px !important;
+}
+
+/* Make type brackets and content visible */
+.swagger-ui .model .model-toggle {
+    display: inline !important;
+    margin-right: 6px !important;
+}
+
+.swagger-ui .model .brace-open,
+.swagger-ui .model .brace-close {
+    color: #4A9FFF !important;
+}
+
+/* Property description - make it more subtle */
+.swagger-ui .model .property-row .renderedMarkdown p {
+    color: #8A9AAA !important;
+    font-size: 13px !important;
+    margin-top: 4px !important;
+    font-style: italic !important;
+}
+
+/* Model toggle (expand/collapse) - Smooth animation */
+.swagger-ui .model-toggle {
+    transition: transform 0.3s ease !important;
+}
+
+.swagger-ui .model-toggle.collapsed {
+    transform: rotate(-90deg) !important;
+}
+
+/* Nested objects - Clear indentation */
+.swagger-ui .model-box-control {
+    margin-left: 20px !important;
+}
+
+/* Example values */
+.swagger-ui .model .prop-format {
+    color: #4ECB71 !important;
+    font-style: italic !important;
+}
+
+/* Tables */
+.swagger-ui table {
+    background: #1A2841 !important;
+}
+
+.swagger-ui table thead tr th {
+    background: #0F1F2E !important;
+    color: #00D9FF !important;
+    border-color: #2A3851 !important;
+}
+
+.swagger-ui table tbody tr td {
+    color: #E0E0E0 !important;
+    border-color: #2A3851 !important;
+}
+
+/* Scrollbars */
+.swagger-ui ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.swagger-ui ::-webkit-scrollbar-track {
+    background: #0A1628;
+}
+
+.swagger-ui ::-webkit-scrollbar-thumb {
+    background: #00D9FF;
+    border-radius: 5px;
+}
+
+.swagger-ui ::-webkit-scrollbar-thumb:hover {
+    background: #4A9FFF;
+}
+
+/* Try it out section */
+.swagger-ui .try-out {
+    background: #1A2841 !important;
+    border-radius: 8px !important;
+    padding: 15px !important;
+}
+
+.swagger-ui .try-out__btn {
+    background: #FF9B5A !important;
+    border-color: #FF9B5A !important;
+    color: #fff !important;
+}
+
+/* Loading animation */
+.swagger-ui .loading-container {
+    background: rgba(10, 22, 40, 0.95) !important;
+}
+
+.swagger-ui .loading-container .loading:after {
+    border-color: #00D9FF transparent !important;
+}
+
+/* Scheme container */
+.swagger-ui .scheme-container {
+    background: #1A2841 !important;
+    border-radius: 8px !important;
+    padding: 15px !important;
+}
+
+/* Markdown */
+.swagger-ui .markdown p,
+.swagger-ui .markdown li {
+    color: #E0E0E0 !important;
+}
+
+.swagger-ui .markdown code {
+    background: #1A2841 !important;
+    color: #00D9FF !important;
+    padding: 2px 6px !important;
+    border-radius: 4px !important;
+}
+
+.swagger-ui .markdown pre {
+    background: #0A1628 !important;
+    border: 1px solid #2A3851 !important;
+}
+
+/* Links */
+.swagger-ui a {
+    color: #00D9FF !important;
+}
+
+.swagger-ui a:hover {
+    color: #4A9FFF !important;
+}
+
+/* Authorization modal */
+.swagger-ui .dialog-ux {
+    background: rgba(10, 22, 40, 0.95) !important;
+}
+
+.swagger-ui .modal-ux {
+    background: #1A2841 !important;
+    border: 1px solid #2A3851 !important;
+    border-radius: 12px !important;
+}
+
+.swagger-ui .modal-ux-header {
+    background: #0F1F2E !important;
+    border-bottom: 2px solid #00D9FF !important;
+}
+
+.swagger-ui .modal-ux-header h3 {
+    color: #00D9FF !important;
+}
