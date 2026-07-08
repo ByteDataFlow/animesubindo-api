@@ -11,6 +11,18 @@ export const DownloadItemSchema = z.object({
     links: z.array(DownloadLinkSchema)
 })
 
+export const MalInfoSchema = z
+    .object({
+        mal_id: z.number().optional().openapi({ example: 21 }),
+        score: z.string().optional().openapi({ example: '8.73' }),
+        synopsis: z.string().optional().openapi({ example: 'Barely surviving in a barrel...' }),
+        trailer_url: z.string().optional().openapi({ example: 'https://www.youtube.com/watch?v=-tviZNY6CSw' }),
+        mal_url: z.string().optional().openapi({ example: 'https://myanimelist.net/anime/21/One_Piece' })
+    })
+    .nullable()
+    .optional()
+    .openapi('MalInfo')
+
 export const AnimeSchema = z
     .object({
         title: z.string().openapi({ example: 'One Piece' }),
@@ -21,7 +33,8 @@ export const AnimeSchema = z
         date: z.string().optional().openapi({ example: 'Hari Ini' }),
         genres: z.array(z.string()).optional().openapi({ example: ['Action', 'Adventure'] }),
         status: z.string().optional().openapi({ example: 'Ongoing' }),
-        rating: z.string().optional().openapi({ example: '8.5' })
+        rating: z.string().optional().openapi({ example: '8.5' }),
+        mal: MalInfoSchema
     })
     .openapi('Anime')
 
@@ -61,7 +74,8 @@ export const AnimeDetailSchema = z
         episodes: z.array(EpisodeSchema),
         batch_links: z.array(EpisodeSchema).optional(),
         lengkap_links: z.array(EpisodeSchema).optional(),
-        genres: z.array(GenreSchema).optional()
+        genres: z.array(GenreSchema).optional(),
+        mal: MalInfoSchema
     })
     .openapi('AnimeDetail')
 

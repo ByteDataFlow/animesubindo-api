@@ -1,5 +1,6 @@
 import axios from 'axios'
 import * as cheerio from 'cheerio'
+import { MalInfo, enrichAnimeListWithMal, enrichAnimeDetailWithMal } from '../services/malService'
 
 export const BASE_URL = process.env.OTAKUDESU_BASE_URL || 'https://otakudesu.blog'
 
@@ -35,6 +36,7 @@ export interface ScrapedAnime {
     genres?: string[]
     status?: string
     rating?: string
+    mal?: MalInfo | null
 }
 
 export interface ScrapedEpisode {
@@ -60,6 +62,7 @@ export interface ScrapedAnimeDetail {
     lengkap_links: ScrapedEpisode[]
     genres?: { name: string; slug: string; link: string }[]
     release_date?: string
+    mal?: MalInfo | null
 }
 
 export interface ScrapedGenre {
@@ -216,7 +219,12 @@ export async function scrapeHome(): Promise<{ ongoing: ScrapedAnime[]; complete:
             }
         })
 
-        return { ongoing, complete }
+        const [enrichedOngoing, enrichedComplete] = await Promise.all([
+            enrichAnimeListWithMal(ongoing),
+            enrichAnimeListWithMal(complete)
+        ])
+
+        return { ongoing: enrichedOngoing, complete: enrichedComplete }
     } catch (error) {
         console.error('Scraping Home Error:', error)
         return { ongoing: [], complete: [] }
@@ -410,7 +418,7 @@ export async function scrapeAnimeDetail(slug: string): Promise<ScrapedAnimeDetai
             })
         }
 
-        return {
+        const result = {
             title,
             japanese,
             score,
@@ -427,6 +435,7 @@ export async function scrapeAnimeDetail(slug: string): Promise<ScrapedAnimeDetai
             batch_links,
             lengkap_links
         }
+        return await enrichAnimeDetailWithMal(result)
     } catch (error) {
         console.error('Scraping Anime Detail Error:', error)
         return null
@@ -606,7 +615,7 @@ export async function scrapeOngoing(page: number = 1): Promise<ScrapedAnime[]> {
             }
         })
 
-        return results
+        return await enrichAnimeListWithMal(results)
     } catch (error) {
         console.error('Scraping Ongoing Error:', error)
         return []
@@ -666,7 +675,7 @@ export async function scrapeCompleteAnime(page: number = 1): Promise<ScrapedAnim
             }
         })
 
-        return results
+        return await enrichAnimeListWithMal(results)
     } catch (error) {
         console.error('Scraping Complete Anime Error:', error)
         return []
