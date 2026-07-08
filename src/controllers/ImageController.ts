@@ -2,6 +2,7 @@
 import { AppError } from '../lib/utils'
 import axios from 'axios'
 import { stream } from 'hono/streaming'
+import { BASE_URL } from '../scrapers/otakudesu'
 
 /**
  * Controller for Image Proxy
@@ -22,7 +23,7 @@ export class ImageController {
                 headers: {
                     'User-Agent':
                         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    Referer: 'https://otakudesu.best/',
+                    Referer: `${BASE_URL}/`,
                     Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
                     'Accept-Language': 'en-US,en;q=0.9',
                     'Sec-Fetch-Dest': 'image',

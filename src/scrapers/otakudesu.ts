@@ -1,7 +1,7 @@
 import axios from 'axios'
 import * as cheerio from 'cheerio'
 
-const BASE_URL = 'https://otakudesu.best'
+export const BASE_URL = process.env.OTAKUDESU_BASE_URL || 'https://otakudesu.blog'
 
 /**
  * AJAX action hashes used by Otakudesu for mirror resolution
@@ -792,7 +792,7 @@ function extractNavigationLinks($: cheerio.CheerioAPI): {
     if (prevLink.length > 0) {
         const href = prevLink.attr('href') || ''
         // Extract slug from URL by splitting on '/' and taking the last segment
-        // Example: "https://otakudesu.best/episode/anime-ep-1-sub-indo/" → "anime-ep-1-sub-indo"
+        // Example: "https://otakudesu.blog/episode/anime-ep-1-sub-indo/" → "anime-ep-1-sub-indo"
         const slug = href.split('/').filter(Boolean).pop() || ''
         prevEpisode = {
             title: prevLink.attr('title') || 'Episode Sebelumnya',

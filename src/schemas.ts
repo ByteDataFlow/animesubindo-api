@@ -15,8 +15,8 @@ export const AnimeSchema = z
     .object({
         title: z.string().openapi({ example: 'One Piece' }),
         slug: z.string().openapi({ example: 'one-piece-sub-indo' }),
-        link: z.string().openapi({ example: 'https://otakudesu.best/anime/one-piece-sub-indo/' }),
-        image: z.string().optional().openapi({ example: 'https://otakudesu.best/.../op.jpg' }),
+        link: z.string().openapi({ example: 'https://otakudesu.blog/anime/one-piece-sub-indo/' }),
+        image: z.string().optional().openapi({ example: 'https://otakudesu.blog/.../op.jpg' }),
         episode: z.string().optional().openapi({ example: 'Episode 1000' }),
         date: z.string().optional().openapi({ example: 'Hari Ini' }),
         genres: z.array(z.string()).optional().openapi({ example: ['Action', 'Adventure'] }),

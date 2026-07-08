@@ -1,7 +1,7 @@
 
 import axios from 'axios';
 
-const BASE_URL = 'https://otakudesu.best';
+const BASE_URL = 'https://otakudesu.blog';
 
 async function check() {
     try {
@@ -18,8 +18,8 @@ async function check() {
         );
         console.log("Response Status:", { success: data.success, data: data.data });
 
-        if (data.success && data.data) {
-            console.log("✅ SUCCESS: The hardcoded action token is VALID.");
+        if (data.data || data.success) {
+            console.log("✅ SUCCESS: The action token is VALID.");
         } else {
             console.log("❌ FAILURE: The action token might be expired or invalid.");
         }

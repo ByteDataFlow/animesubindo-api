@@ -193,16 +193,16 @@ export const getAnimeByGenreRoute = createRoute({
                                 {
                                     title: 'One Piece',
                                     slug: 'one-piece-sub-indo',
-                                    link: 'https://otakudesu.best/anime/one-piece-sub-indo/',
-                                    image: 'https://otakudesu.best/.../op.jpg',
+                                    link: 'https://otakudesu.blog/anime/one-piece-sub-indo/',
+                                    image: 'https://otakudesu.blog/.../op.jpg',
                                     episode: 'Episode 1000',
                                     date: 'Hari Ini'
                                 },
                                 {
                                     title: 'Boruto: Naruto Next Generations',
                                     slug: 'boruto-naruto-next-generations-sub-indo',
-                                    link: 'https://otakudesu.best/anime/boruto-naruto-next-generations-sub-indo/',
-                                    image: 'https://otakudesu.best/.../boruto.jpg',
+                                    link: 'https://otakudesu.blog/anime/boruto-naruto-next-generations-sub-indo/',
+                                    image: 'https://otakudesu.blog/.../boruto.jpg',
                                     episode: 'Episode 200',
                                     date: 'Kemarin'
                                 }

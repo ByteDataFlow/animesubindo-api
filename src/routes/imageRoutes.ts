@@ -16,7 +16,7 @@ export const registerImageRoutes = (app: OpenAPIHono) => {
                     url: z
                         .string()
                         .url()
-                        .openapi({ example: 'https://otakudesu.best/wp-content/uploads/...' })
+                        .openapi({ example: 'https://otakudesu.blog/wp-content/uploads/...' })
                 })
             },
             responses: {
