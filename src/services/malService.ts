@@ -217,7 +217,7 @@ async function fetchMalInfoWithTimeout(
         const scoreText = $detail('.fl-l.score .score-label').text().trim()
         const score = scoreText && scoreText !== 'N/A' ? scoreText : undefined
 
-        let synopsis = $detail('[itemprop="description"]').text().trim()
+        let synopsis: string | undefined = $detail('[itemprop="description"]').text().trim()
         if (synopsis) {
             synopsis = synopsis.replace(/\r\n/g, '\n').replace(/\[Written by MAL Rewrite\]/gi, '').trim()
         } else {
