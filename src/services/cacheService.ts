@@ -198,4 +198,4 @@ export class CacheInstance {
 
 // Export pre-configured cache instances
 export const defaultCache = new CacheInstance('Default', 300) // 5 minutes default
-export const malCacheInstance = new CacheInstance('MAL', 3600) // 1 hour default
+export const malCacheInstance = new CacheInstance('MAL', 86400) // 24 hours default

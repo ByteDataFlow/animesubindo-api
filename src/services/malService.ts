@@ -10,7 +10,7 @@ export interface MalInfo {
     mal_url?: string
 }
 
-// Distributed Cache + In-Memory Cache with TTL 1 hour (3600 seconds)
+// Distributed Cache + In-Memory Cache with TTL 24 hours (86400 seconds)
 export { malCache }
 
 // Concurrency limiter for external MAL requests
@@ -270,7 +270,7 @@ export async function getMalInfoWithConcurrencyLimit(title: string, slug?: strin
         if (cachedAgain !== undefined) return cachedAgain
 
         const malInfo = await fetchMalInfoWithTimeout(cleaned, 8000, cSlug)
-        await malCache.set(cacheKey, malInfo || null, 3600) // TTL 1 hour (3600s)
+        await malCache.set(cacheKey, malInfo || null, 86400) // TTL 24 hours (86400s)
         return malInfo || null
     } finally {
         releaseToken()
