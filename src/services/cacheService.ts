@@ -1,21 +1,48 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import NodeCache from 'node-cache'
-import { Redis } from '@upstash/redis'
+import { Redis as UpstashRedis } from '@upstash/redis'
+import { createClient } from 'redis'
 
-// Check for Upstash / Vercel KV credentials
-const redisUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL
-const redisToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN
+// Check for Upstash / Vercel KV credentials (REST API)
+const upstashUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL
+const upstashToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN
 
-let redisClient: Redis | null = null
-if (redisUrl && redisToken) {
+// Check for Vercel Marketplace standard Redis integration credentials (REDIS_URL / KV_URL)
+const standardRedisUrl = process.env.REDIS_URL || process.env.KV_URL
+
+let upstashClient: UpstashRedis | null = null
+let nodeRedisClient: any = null
+
+if (upstashUrl && upstashToken) {
     try {
-        redisClient = new Redis({ url: redisUrl, token: redisToken })
-        console.log('⚡ [CacheService] Connected to Distributed Redis / Vercel KV')
+        upstashClient = new UpstashRedis({ url: upstashUrl, token: upstashToken })
+        console.log('⚡ [CacheService] Connected to Distributed Redis (Upstash REST API)')
     } catch (e) {
-        console.warn('⚠️ [CacheService] Failed to initialize Redis client, falling back to in-memory NodeCache:', e)
+        console.warn('⚠️ [CacheService] Failed to initialize Upstash Redis client:', e)
+    }
+} else if (standardRedisUrl) {
+    try {
+        nodeRedisClient = createClient({ url: standardRedisUrl })
+        nodeRedisClient.on('error', (err: any) => console.warn('⚠️ [CacheService] Node Redis Client Error:', err.message || err))
+        console.log('⚡ [CacheService] Connected to Distributed Redis (REDIS_URL)')
+    } catch (e) {
+        console.warn('⚠️ [CacheService] Failed to initialize standard Node Redis client:', e)
     }
 } else {
     if (process.env.NODE_ENV === 'production') {
-        console.warn('⚠️ [CacheService] No Redis credentials found (KV_REST_API_URL / UPSTASH_REDIS_REST_URL). Using L1 local memory cache.')
+        console.warn('⚠️ [CacheService] No Redis credentials found (REDIS_URL / KV_REST_API_URL / UPSTASH_REDIS_REST_URL). Using L1 local memory cache.')
+    }
+}
+
+async function ensureNodeRedisConnected(): Promise<boolean> {
+    if (!nodeRedisClient) return false
+    if (nodeRedisClient.isOpen) return true
+    try {
+        await nodeRedisClient.connect()
+        return true
+    } catch (err) {
+        console.warn('⚠️ [CacheService] Failed to connect nodeRedisClient:', err)
+        return false
     }
 }
 
@@ -32,21 +59,47 @@ export class CacheInstance {
      * Get value from cache (Checks Redis first, fallback to in-memory)
      */
     async get<T>(key: string): Promise<T | undefined> {
-        // Try L2 Distributed Cache (Redis) if enabled
-        if (redisClient && process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+        if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
+            return this.memoryCache.get<T>(key)
+        }
+
+        // 1. Try Upstash REST Redis
+        if (upstashClient) {
             try {
-                const data = await redisClient.get<T>(key)
+                const data = await upstashClient.get<T>(key)
                 if (data !== null && data !== undefined) {
-                    // Update L1 local memory cache for subsequent faster hits
                     this.memoryCache.set(key, data, this.memoryCache.options.stdTTL || 300)
                     return data
                 }
                 return undefined
             } catch (error) {
-                console.warn(`⚠️ [CacheService:${this.name}] Redis GET error for key "${key}", checking local RAM:`, error)
+                console.warn(`⚠️ [CacheService:${this.name}] Upstash GET error for key "${key}":`, error)
             }
         }
-        // Fallback to L1 in-memory cache
+
+        // 2. Try Standard Node Redis (REDIS_URL)
+        if (nodeRedisClient) {
+            try {
+                const connected = await ensureNodeRedisConnected()
+                if (connected) {
+                    const raw = await nodeRedisClient.get(key)
+                    if (raw !== null && raw !== undefined) {
+                        try {
+                            const parsed = JSON.parse(raw) as T
+                            this.memoryCache.set(key, parsed, this.memoryCache.options.stdTTL || 300)
+                            return parsed
+                        } catch {
+                            return raw as unknown as T
+                        }
+                    }
+                    return undefined
+                }
+            } catch (error) {
+                console.warn(`⚠️ [CacheService:${this.name}] Node Redis GET error for key "${key}":`, error)
+            }
+        }
+
+        // 3. Fallback to L1 in-memory cache
         return this.memoryCache.get<T>(key)
     }
 
@@ -56,16 +109,33 @@ export class CacheInstance {
     async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
         if (value === undefined) return
         const ex = ttlSeconds || this.memoryCache.options.stdTTL || 300
-        
+
         // Save to L1 local RAM
         this.memoryCache.set(key, value, ex)
 
-        // Save to L2 Distributed Redis
-        if (redisClient && process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+        if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
+            return
+        }
+
+        // Save to Upstash REST Redis
+        if (upstashClient) {
             try {
-                await redisClient.set(key, value, { ex })
+                await upstashClient.set(key, value, { ex })
             } catch (error) {
-                console.warn(`⚠️ [CacheService:${this.name}] Redis SET error for key "${key}":`, error)
+                console.warn(`⚠️ [CacheService:${this.name}] Upstash SET error for key "${key}":`, error)
+            }
+        }
+
+        // Save to Standard Node Redis (REDIS_URL)
+        if (nodeRedisClient) {
+            try {
+                const connected = await ensureNodeRedisConnected()
+                if (connected) {
+                    const serialized = typeof value === 'string' ? value : JSON.stringify(value)
+                    await nodeRedisClient.set(key, serialized, { EX: ex })
+                }
+            } catch (error) {
+                console.warn(`⚠️ [CacheService:${this.name}] Node Redis SET error for key "${key}":`, error)
             }
         }
     }
@@ -75,11 +145,21 @@ export class CacheInstance {
      */
     async del(key: string): Promise<void> {
         this.memoryCache.del(key)
-        if (redisClient && process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+        if (process.env.NODE_ENV === 'test' || process.env.VITEST) return
+
+        if (upstashClient) {
             try {
-                await redisClient.del(key)
+                await upstashClient.del(key)
             } catch (error) {
-                console.warn(`⚠️ [CacheService:${this.name}] Redis DEL error for key "${key}":`, error)
+                console.warn(`⚠️ [CacheService:${this.name}] Upstash DEL error for key "${key}":`, error)
+            }
+        }
+        if (nodeRedisClient) {
+            try {
+                const connected = await ensureNodeRedisConnected()
+                if (connected) await nodeRedisClient.del(key)
+            } catch (error) {
+                console.warn(`⚠️ [CacheService:${this.name}] Node Redis DEL error for key "${key}":`, error)
             }
         }
     }
@@ -89,11 +169,21 @@ export class CacheInstance {
      */
     async flushAll(): Promise<void> {
         this.memoryCache.flushAll()
-        if (redisClient && process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+        if (process.env.NODE_ENV === 'test' || process.env.VITEST) return
+
+        if (upstashClient) {
             try {
-                await redisClient.flushdb()
+                await upstashClient.flushdb()
             } catch (error) {
-                console.warn(`⚠️ [CacheService:${this.name}] Redis FLUSHDB error:`, error)
+                console.warn(`⚠️ [CacheService:${this.name}] Upstash FLUSHDB error:`, error)
+            }
+        }
+        if (nodeRedisClient) {
+            try {
+                const connected = await ensureNodeRedisConnected()
+                if (connected) await nodeRedisClient.flushDb()
+            } catch (error) {
+                console.warn(`⚠️ [CacheService:${this.name}] Node Redis FLUSHDB error:`, error)
             }
         }
     }

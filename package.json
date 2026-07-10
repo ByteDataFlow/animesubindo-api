@@ -27,6 +27,7 @@
     "hono": "^4.11.3",
     "hono-rate-limiter": "^0.5.3",
     "node-cache": "^5.1.2",
+    "redis": "^6.1.0",
     "zod": "^4.3.4"
   },
   "devDependencies": {
