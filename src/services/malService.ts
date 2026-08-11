@@ -1,5 +1,4 @@
 import axios from 'axios'
-import * as cheerio from 'cheerio'
 import { malCacheInstance as malCache } from './cacheService'
 
 export interface MalInfo {
@@ -8,6 +7,9 @@ export interface MalInfo {
     synopsis?: string
     trailer_url?: string
     mal_url?: string
+    rating?: string
+    year?: number
+    season?: string
 }
 
 // Distributed Cache + In-Memory Cache with TTL 24 hours (86400 seconds)
@@ -16,7 +18,7 @@ export { malCache }
 // Concurrency limiter for external MAL requests
 let activeRequests = 0
 const queue: (() => void)[] = []
-const MAX_CONCURRENT_REQUESTS = 3
+const MAX_CONCURRENT_REQUESTS = 1
 
 async function acquireToken(): Promise<void> {
     if (activeRequests < MAX_CONCURRENT_REQUESTS) {
@@ -32,19 +34,25 @@ async function acquireToken(): Promise<void> {
 }
 
 function releaseToken(): void {
-    activeRequests--
-    const next = queue.shift()
-    if (next) next()
+    // 700ms delay before releasing the token to respect API rate limits (90/min)
+    setTimeout(() => {
+        activeRequests--
+        const next = queue.shift()
+        if (next) next()
+    }, 700)
 }
 
 /**
- * Clean Otakudesu anime titles to get accurate search results on MyAnimeList
+ * Clean Otakudesu anime titles to get accurate search results
  */
 export function cleanTitle(title: string): string {
     return title
         .replace(/\(Episode\s*\d+\s*[–-]\s*\d+\)/gi, '')
         .replace(/:\s*Episode\s*\d+.*$/gi, '')
-        .replace(/\[?(Subtitle\s+Indonesia|Sub\s+Indo|Subtitle\s+Indo|Batch|Lengkap|End|Tamat|Ongoing)\]?/gi, '')
+        .replace(
+            /\[?(Subtitle\s+Indonesia|Sub\s+Indo|Subtitle\s+Indo|Batch|Lengkap|End|Tamat|Ongoing)\]?/gi,
+            ''
+        )
         .replace(/\[\s*\]/g, '')
         .replace(/\(\s*\)/g, '')
         .replace(/\s*[–-]\s*$/, '')
@@ -65,107 +73,50 @@ export function cleanSlug(slug?: string): string {
         .trim()
 }
 
-function removeSeasonTags(str: string): string {
-    return str
-        .replace(/\b(?:season|s|part|cour|stage)\s*\d+\b/gi, '')
-        .replace(/\b\d+(st|nd|rd|th)\s+season\b/gi, '')
-        .replace(/\s+\d+$/g, '')
-        .replace(/\s+/g, ' ')
-        .trim()
-}
-
-function extractSeasonNumber(str: string): number | null {
-    const m =
-        str.match(/\b(?:season|s|part|cour|stage)\s*(\d+)\b/i) ||
-        str.match(/\b(\d+)(?:st|nd|rd|th)\s+season\b/i) ||
-        str.match(/\s(\d+)$/) ||
-        str.match(/\s(II|III|IV|V)$/)
-    if (m) {
-        const val = m[1]
-        if (val === 'II') return 2
-        if (val === 'III') return 3
-        if (val === 'IV') return 4
-        if (val === 'V') return 5
-        const n = parseInt(val, 10)
-        if (!isNaN(n) && n > 1 && n < 20) return n
-    }
-    return null
-}
-
-async function searchMalOneQuery(
-    query: string,
-    cTitle: string,
-    cSlug: string,
-    targetSeason: number | null,
-    signal: AbortSignal
-): Promise<{ bestLink?: string; maxScore: number }> {
-    if (!query) return { maxScore: -100 }
-    const searchUrl = `https://myanimelist.net/anime.php?q=${encodeURIComponent(query)}&cat=anime`
-    const searchRes = await axios.get(searchUrl, {
-        headers: {
-            'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9'
-        },
-        signal
-    })
-
-    const $search = cheerio.load(searchRes.data)
-    const rows: { title: string; link: string; type: string }[] = []
-
-    $search('div.js-categories-seasonal table tr').each((i, el) => {
-        if (i > 0 && i <= 8) {
-            const title = $search(el).find('strong').first().text().trim()
-            const link =
-                $search(el).find('a.hoverinfo_trigger[id^="sarea"]').attr('href') ||
-                $search(el).find('a').attr('href') ||
-                ''
-            const type = $search(el).find('td').eq(2).text().trim()
-            if (title && link) rows.push({ title, link, type })
-        }
-    })
-
-    if (rows.length === 0) return { maxScore: -100 }
-
-    let bestLink = rows[0].link
-    let maxScore = -100
-    const targetWords = [...new Set([...cTitle.toLowerCase().split(/\s+/), ...cSlug.toLowerCase().split(/\s+/)])].filter(
-        (w) => w.length > 2
-    )
-
-    for (const row of rows) {
-        if (
-            row.type !== 'TV' &&
-            row.type !== 'Movie' &&
-            row.type !== 'ONA' &&
-            row.type !== 'OVA' &&
-            row.type !== 'Special'
-        )
-            continue
-        let score = 0
-        const rTitleLower = row.title.toLowerCase()
-        const rowSeason = extractSeasonNumber(row.title)
-        if (targetSeason !== null) {
-            if (rowSeason === targetSeason) score += 12
-            else if (rowSeason !== null && rowSeason !== targetSeason) score -= 6
-            else if (targetSeason > 1 && rowSeason === null && !rTitleLower.includes(targetSeason.toString())) score -= 4
-        } else {
-            if (rowSeason !== null && rowSeason > 1) score -= 3
-        }
-        for (const w of targetWords) {
-            if (rTitleLower.includes(w)) score += 3
-        }
-        if (rTitleLower === cTitle.toLowerCase() || rTitleLower === cSlug.toLowerCase()) score += 20
-        if (score > maxScore) {
-            maxScore = score
-            bestLink = row.link
-        }
-    }
-    return { bestLink, maxScore }
+/**
+ * Strips HTML tags from a string
+ */
+function stripHtml(html: string): string {
+    return html.replace(/<[^>]*>?/gm, '').trim()
 }
 
 /**
- * Fetch anime info from MyAnimeList with timeout protection
+ * Helper to query AniList GraphQL
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function queryAniList(searchQuery: string, controller: AbortController): Promise<any | null> {
+    const graphqlQuery = `
+        query ($search: String) {
+            Page(page: 1, perPage: 1) {
+                media(search: $search, type: ANIME, sort: SEARCH_MATCH) {
+                    idMal
+                    averageScore
+                    description
+                    trailer {
+                        site
+                        id
+                    }
+                    seasonYear
+                    season
+                    isAdult
+                }
+            }
+        }
+    `
+    const response = await axios.post(
+        'https://graphql.anilist.co',
+        { query: graphqlQuery, variables: { search: searchQuery } },
+        {
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            signal: controller.signal
+        }
+    )
+    const mediaList = response.data?.data?.Page?.media
+    return mediaList && mediaList.length > 0 ? mediaList[0] : null
+}
+
+/**
+ * Fetch anime info from AniList GraphQL API with timeout protection
  */
 async function fetchMalInfoWithTimeout(
     cleanedTitle: string,
@@ -176,76 +127,72 @@ async function fetchMalInfoWithTimeout(
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
     try {
-        const targetSeason = extractSeasonNumber(cleanedTitle) || extractSeasonNumber(cleanedSlug)
-        const qTitle = removeSeasonTags(cleanedTitle)
-        const qSlug = removeSeasonTags(cleanedSlug)
+        const query = cleanedTitle || cleanedSlug
+        if (!query) return null
 
-        let { bestLink, maxScore } = await searchMalOneQuery(
-            qTitle,
-            cleanedTitle,
-            cleanedSlug,
-            targetSeason,
-            controller.signal
-        )
+        let media = await queryAniList(query, controller)
 
-        if ((maxScore <= 0 || !bestLink) && qSlug && qSlug !== qTitle) {
-            const slugRes = await searchMalOneQuery(qSlug, cleanedTitle, cleanedSlug, targetSeason, controller.signal)
-            if (slugRes.maxScore > maxScore && slugRes.bestLink) {
-                bestLink = slugRes.bestLink
-                maxScore = slugRes.maxScore
+        // Fallback 1: Try shorter title (first 3 words)
+        if (!media) {
+            const words = query.split(/\s+/)
+            if (words.length > 3) {
+                const shortQuery = words.slice(0, 3).join(' ')
+                media = await queryAniList(shortQuery, controller)
             }
         }
 
-        if (!bestLink) return null
+        // Fallback 2: Try slug if it's different
+        if (!media && cleanedSlug && cleanedSlug !== query) {
+            const slugWords = cleanedSlug.split(/\s+/)
+            if (slugWords.length > 3) {
+                const shortSlug = slugWords.slice(0, 3).join(' ')
+                media = await queryAniList(shortSlug, controller)
+            } else {
+                media = await queryAniList(cleanedSlug, controller)
+            }
+        }
 
-        // 2. Fetch Detail Page
-        const detailRes = await axios.get(bestLink, {
-            headers: {
-                'User-Agent':
-                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept-Language': 'en-US,en;q=0.9'
-            },
-            signal: controller.signal
-        })
+        if (!media) return null
 
-        const $detail = cheerio.load(detailRes.data)
+        // Convert averageScore (1-100) to MAL format (1-10 string with 2 decimals)
+        let scoreStr: string | undefined = undefined
+        if (typeof media.averageScore === 'number') {
+            scoreStr = (media.averageScore / 10).toFixed(2)
+        }
 
-        // Extract mal_id from URL
-        const idMatch = bestLink.match(/\/anime\/(\d+)/)
-        const mal_id = idMatch ? parseInt(idMatch[1], 10) : undefined
-
-        const scoreText = $detail('.fl-l.score .score-label').text().trim()
-        const score = scoreText && scoreText !== 'N/A' ? scoreText : undefined
-
-        let synopsis: string | undefined = $detail('[itemprop="description"]').text().trim()
+        let synopsis = media.description ? stripHtml(media.description) : undefined
         if (synopsis) {
-            synopsis = synopsis.replace(/\r\n/g, '\n').replace(/\[Written by MAL Rewrite\]/gi, '').trim()
-        } else {
-            synopsis = undefined
+            synopsis = synopsis
+                .replace(/\r\n/g, '\n')
+                .replace(/\[Written by MAL Rewrite\]/gi, '')
+                .trim()
         }
 
-        let trailer_url =
-            $detail('a.iframe.js-fancybox-video').attr('href') ||
-            $detail('iframe[src*="youtube"]').attr('src') ||
-            $detail('a[href*="youtube.com/watch"]').attr('href')
-
-        if (trailer_url) {
-            const match = trailer_url.match(/embed\/([a-zA-Z0-9_-]+)/)
-            if (match && match[1]) {
-                trailer_url = `https://www.youtube.com/watch?v=${match[1]}`
-            }
-        } else {
-            trailer_url = undefined
+        let trailer_url: string | undefined = undefined
+        if (media.trailer && media.trailer.site === 'youtube' && media.trailer.id) {
+            trailer_url = `https://www.youtube.com/watch?v=${media.trailer.id}`
         }
+
+        let ratingStr: string | undefined = undefined
+        if (media.isAdult === true) ratingStr = 'Rx - Hentai'
+        else if (media.isAdult === false) ratingStr = 'PG-13 or lower (estimated)'
 
         return {
-            mal_id,
-            score,
-            synopsis,
-            trailer_url,
-            mal_url: bestLink
+            mal_id: media.idMal || undefined,
+            score: scoreStr,
+            synopsis: synopsis,
+            trailer_url: trailer_url,
+            mal_url: media.idMal ? `https://myanimelist.net/anime/${media.idMal}` : undefined,
+            rating: ratingStr,
+            year: media.seasonYear || undefined,
+            season: media.season ? media.season.toLowerCase() : undefined
         }
-    } catch (_error) {
+    } catch (_error: any) {
+        if (_error?.response?.status === 429) {
+            console.error('Rate limited by AniList (429)!')
+            throw _error
+        }
+        console.error('Error in fetchMalInfoWithTimeout (AniList):', _error?.message || _error)
         return null
     } finally {
         clearTimeout(timeoutId)
@@ -255,12 +202,17 @@ async function fetchMalInfoWithTimeout(
 /**
  * Get MAL Info for a title using cache and concurrency limiting
  */
-export async function getMalInfoWithConcurrencyLimit(title: string, slug?: string): Promise<MalInfo | null> {
+export async function getMalInfoWithConcurrencyLimit(
+    title: string,
+    slug?: string
+): Promise<MalInfo | null> {
     const cleaned = cleanTitle(title)
     const cSlug = cleanSlug(slug)
     if (!cleaned && !cSlug) return null
 
-    const cacheKey = cSlug ? `mal_${cleaned.toLowerCase()}_${cSlug.toLowerCase()}` : `mal_${cleaned.toLowerCase()}`
+    const cacheKey = cSlug
+        ? `mal_${cleaned.toLowerCase()}_${cSlug.toLowerCase()}`
+        : `mal_${cleaned.toLowerCase()}`
     const cached = await malCache.get<MalInfo | null>(cacheKey)
     if (cached !== undefined) return cached
 
@@ -270,8 +222,13 @@ export async function getMalInfoWithConcurrencyLimit(title: string, slug?: strin
         if (cachedAgain !== undefined) return cachedAgain
 
         const malInfo = await fetchMalInfoWithTimeout(cleaned, 8000, cSlug)
-        await malCache.set(cacheKey, malInfo || null, 86400) // TTL 24 hours (86400s)
+        const ttl = malInfo ? 86400 : 3600 // 24 hours if data exists, only 1 hour if null
+        await malCache.set(cacheKey, malInfo || null, ttl)
         return malInfo || null
+    } catch (_error: any) {
+        // If it's a rate limit error, do NOT cache the null result!
+        // Just return null for this request so the frontend doesn't crash.
+        return null
     } finally {
         releaseToken()
     }
@@ -283,13 +240,19 @@ export async function getMalInfoWithConcurrencyLimit(title: string, slug?: strin
 export async function enrichAnimeListWithMal<
     T extends { title: string; slug?: string; link?: string; mal?: MalInfo | null }
 >(animeList: T[], force: boolean = false): Promise<T[]> {
-    if (!force && (process.env.ENABLE_MAL_ENRICHMENT === 'false' || process.env.NODE_ENV === 'test' || process.env.VITEST)) {
+    if (
+        !force &&
+        (process.env.ENABLE_MAL_ENRICHMENT === 'false' ||
+            process.env.NODE_ENV === 'test' ||
+            process.env.VITEST)
+    ) {
         return animeList.map((item) => ({ ...item, mal: null }))
     }
 
     const enriched = await Promise.all(
         animeList.map(async (item) => {
-            const slugStr = item.slug || (item.link ? item.link.split('/').filter(Boolean).pop() : '') || ''
+            const slugStr =
+                item.slug || (item.link ? item.link.split('/').filter(Boolean).pop() : '') || ''
             const mal = await getMalInfoWithConcurrencyLimit(item.title, slugStr)
             return { ...item, mal: mal || null }
         })
@@ -304,11 +267,17 @@ export async function enrichAnimeDetailWithMal<
     T extends { title: string; slug?: string; link?: string; mal?: MalInfo | null }
 >(anime: T | null, force: boolean = false, slug?: string): Promise<T | null> {
     if (!anime) return null
-    if (!force && (process.env.ENABLE_MAL_ENRICHMENT === 'false' || process.env.NODE_ENV === 'test' || process.env.VITEST)) {
+    if (
+        !force &&
+        (process.env.ENABLE_MAL_ENRICHMENT === 'false' ||
+            process.env.NODE_ENV === 'test' ||
+            process.env.VITEST)
+    ) {
         return { ...anime, mal: null }
     }
 
-    const slugStr = slug || anime.slug || (anime.link ? anime.link.split('/').filter(Boolean).pop() : '') || ''
+    const slugStr =
+        slug || anime.slug || (anime.link ? anime.link.split('/').filter(Boolean).pop() : '') || ''
     const mal = await getMalInfoWithConcurrencyLimit(anime.title, slugStr)
     return { ...anime, mal: mal || null }
 }

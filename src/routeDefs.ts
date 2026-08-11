@@ -63,7 +63,9 @@ export const getAnimeDetailRoute = createRoute({
     path: '/api/anime/{slug}',
     summary: 'Get Anime Details',
     request: {
-        params: z.object({ slug: z.string().openapi({ example: 'sozai-isekai-ryokouki-sub-indo' }) })
+        params: z.object({
+            slug: z.string().openapi({ example: 'sozai-isekai-ryokouki-sub-indo' })
+        })
     },
     responses: {
         200: {

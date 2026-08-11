@@ -1,6 +1,6 @@
 import axios from 'axios'
 import * as cheerio from 'cheerio'
-import { MalInfo, enrichAnimeListWithMal, enrichAnimeDetailWithMal } from '../services/malService'
+import { MalInfo, enrichAnimeDetailWithMal } from '../services/malService'
 
 export const BASE_URL = process.env.OTAKUDESU_BASE_URL || 'https://otakudesu.blog'
 
@@ -25,7 +25,6 @@ const SELECTORS = {
     DOWNLOAD_LINK: 'a'
 } as const
 
-
 export interface ScrapedAnime {
     title: string
     slug: string
@@ -36,7 +35,6 @@ export interface ScrapedAnime {
     genres?: string[]
     status?: string
     rating?: string
-    mal?: MalInfo | null
 }
 
 export interface ScrapedEpisode {
@@ -219,12 +217,7 @@ export async function scrapeHome(): Promise<{ ongoing: ScrapedAnime[]; complete:
             }
         })
 
-        const [enrichedOngoing, enrichedComplete] = await Promise.all([
-            enrichAnimeListWithMal(ongoing),
-            enrichAnimeListWithMal(complete)
-        ])
-
-        return { ongoing: enrichedOngoing, complete: enrichedComplete }
+        return { ongoing, complete }
     } catch (error) {
         console.error('Scraping Home Error:', error)
         return { ongoing: [], complete: [] }
@@ -251,7 +244,6 @@ export async function scrapeAnimeDetail(slug: string): Promise<ScrapedAnimeDetai
         } catch (_e) {
             /* Check fallback if failed */
         }
-
 
         let $ = cheerio.load(response ? response.data : '')
 
@@ -394,7 +386,12 @@ export async function scrapeAnimeDetail(slug: string): Promise<ScrapedAnimeDetai
         // Standard list
         if ($('.episodelist').length > 0) {
             $('.episodelist ul li').each((i, el) => {
-                const epTitle = $(el).find('span a').text().replace(/\n/g, ' ').replace(/\s+/g, ' ').trim()
+                const epTitle = $(el)
+                    .find('span a')
+                    .text()
+                    .replace(/\n/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim()
                 const epLink = $(el).find('span a').attr('href')
                 const epDate = $(el).find('.zeebr').text().trim()
                 let epSlug = ''
@@ -405,12 +402,26 @@ export async function scrapeAnimeDetail(slug: string): Promise<ScrapedAnimeDetai
                 if (epTitle && epLink) {
                     const lowerTitle = epTitle.toLowerCase()
                     const isLengkap = lowerTitle.includes('lengkap') || epLink.includes('/lengkap/')
-                    const isBatch = !isLengkap && (lowerTitle.includes('batch') || title.includes('[Batch]') || epLink.includes('/batch/'))
+                    const isBatch =
+                        !isLengkap &&
+                        (lowerTitle.includes('batch') ||
+                            title.includes('[Batch]') ||
+                            epLink.includes('/batch/'))
 
                     if (isLengkap) {
-                        lengkap_links.push({ title: epTitle, slug: epSlug, link: epLink, date: epDate })
+                        lengkap_links.push({
+                            title: epTitle,
+                            slug: epSlug,
+                            link: epLink,
+                            date: epDate
+                        })
                     } else if (isBatch) {
-                        batch_links.push({ title: epTitle, slug: epSlug, link: epLink, date: epDate })
+                        batch_links.push({
+                            title: epTitle,
+                            slug: epSlug,
+                            link: epLink,
+                            date: epDate
+                        })
                     } else {
                         episodes.push({ title: epTitle, slug: epSlug, link: epLink, date: epDate })
                     }
@@ -465,21 +476,22 @@ export async function scrapeSearch(query: string): Promise<ScrapedAnime[]> {
             let rating = 'N/A'
 
             // Parse .set (or text nodes)
-            $(el).find('.set, .sets, .set2').each((j, set) => {
-                const text = $(set).text().trim()
-                if (text.startsWith('Genres')) {
-                    const genreText = text.replace('Genres :', '').replace('Genres:', '').trim()
-                    genreText.split(',').forEach(g => {
-                        const trimmed = g.trim()
-                        if (trimmed) genres.push(trimmed)
-                    })
-                } else if (text.startsWith('Status')) {
-                    status = text.replace('Status :', '').replace('Status:', '').trim()
-                } else if (text.startsWith('Rating')) {
-                    rating = text.replace('Rating :', '').replace('Rating:', '').trim() || 'N/A'
-                }
-            })
-
+            $(el)
+                .find('.set, .sets, .set2')
+                .each((j, set) => {
+                    const text = $(set).text().trim()
+                    if (text.startsWith('Genres')) {
+                        const genreText = text.replace('Genres :', '').replace('Genres:', '').trim()
+                        genreText.split(',').forEach((g) => {
+                            const trimmed = g.trim()
+                            if (trimmed) genres.push(trimmed)
+                        })
+                    } else if (text.startsWith('Status')) {
+                        status = text.replace('Status :', '').replace('Status:', '').trim()
+                    } else if (text.startsWith('Rating')) {
+                        rating = text.replace('Rating :', '').replace('Rating:', '').trim() || 'N/A'
+                    }
+                })
 
             let slug = ''
             if (link) {
@@ -615,7 +627,7 @@ export async function scrapeOngoing(page: number = 1): Promise<ScrapedAnime[]> {
             }
         })
 
-        return await enrichAnimeListWithMal(results)
+        return results
     } catch (error) {
         console.error('Scraping Ongoing Error:', error)
         return []
@@ -675,7 +687,7 @@ export async function scrapeCompleteAnime(page: number = 1): Promise<ScrapedAnim
             }
         })
 
-        return await enrichAnimeListWithMal(results)
+        return results
     } catch (error) {
         console.error('Scraping Complete Anime Error:', error)
         return []
@@ -765,13 +777,15 @@ function extractDownloadLinks($: cheerio.CheerioAPI): DownloadItem[] {
         const links: DownloadLink[] = []
 
         // Extract all download providers for this resolution
-        $(el).find('a').each((_j, a) => {
-            const provider = $(a).text().trim()
-            const dUrl = $(a).attr('href')
-            if (provider && dUrl) {
-                links.push({ provider, url: dUrl })
-            }
-        })
+        $(el)
+            .find('a')
+            .each((_j, a) => {
+                const provider = $(a).text().trim()
+                const dUrl = $(a).attr('href')
+                if (provider && dUrl) {
+                    links.push({ provider, url: dUrl })
+                }
+            })
 
         if (resolution && links.length > 0) {
             download_links.push({ resolution, links })
@@ -1184,9 +1198,12 @@ export async function scrapeLengkap(slug: string): Promise<ScrapedLengkap | null
             const lines = infoHtml.split('<br>')
             lines.forEach((line) => {
                 const cleanLine = line.replace(/<[^>]*>/g, '').trim()
-                if (cleanLine.includes('Japanese:'))
-                    japanese = cleanLine.split(':')[1]?.trim()
-                else if (cleanLine.includes('Score:') || cleanLine.includes('Rating:') || cleanLine.includes('Skor:'))
+                if (cleanLine.includes('Japanese:')) japanese = cleanLine.split(':')[1]?.trim()
+                else if (
+                    cleanLine.includes('Score:') ||
+                    cleanLine.includes('Rating:') ||
+                    cleanLine.includes('Skor:')
+                )
                     score = cleanLine.split(':')[1]?.trim()
                 else if (cleanLine.includes('Producers:') || cleanLine.includes('Produser:'))
                     producers = cleanLine.split(':')[1]?.trim()
@@ -1196,13 +1213,25 @@ export async function scrapeLengkap(slug: string): Promise<ScrapedLengkap | null
                     total_episode = cleanLine.split(':')[1]?.trim()
                 else if (cleanLine.includes('Duration:') || cleanLine.includes('Durasi:'))
                     duration = cleanLine.split(':')[1]?.trim()
-                else if (cleanLine.includes('Tanggal Rilis:') || cleanLine.includes('Aired:') || cleanLine.includes('Date:'))
+                else if (
+                    cleanLine.includes('Tanggal Rilis:') ||
+                    cleanLine.includes('Aired:') ||
+                    cleanLine.includes('Date:')
+                )
                     release_date = cleanLine.split(':')[1]?.trim()
             })
         }
 
-        const episodes: { title: string; downloadUrls: { resolution: string; links: { provider: string; url: string }[] }[] }[] = []
-        let batch: { title: string; downloadUrls: { resolution: string; links: { provider: string; url: string }[] }[] } | undefined
+        const episodes: {
+            title: string
+            downloadUrls: { resolution: string; links: { provider: string; url: string }[] }[]
+        }[] = []
+        let batch:
+            | {
+                  title: string
+                  downloadUrls: { resolution: string; links: { provider: string; url: string }[] }[]
+              }
+            | undefined
 
         // Iterate over all h4 headers inside .download containers
         $('.download h4').each((_, h4) => {
@@ -1215,12 +1244,14 @@ export async function scrapeLengkap(slug: string): Promise<ScrapedLengkap | null
             ul.find('li').each((_, li) => {
                 const resolution = $(li).find('strong').text().trim()
                 const linkList: { provider: string; url: string }[] = []
-                $(li).find('a').each((_, a) => {
-                    linkList.push({
-                        provider: $(a).text().trim(),
-                        url: $(a).attr('href') || ''
+                $(li)
+                    .find('a')
+                    .each((_, a) => {
+                        linkList.push({
+                            provider: $(a).text().trim(),
+                            url: $(a).attr('href') || ''
+                        })
                     })
-                })
                 links.push({ resolution, links: linkList })
             })
 
@@ -1250,7 +1281,6 @@ export async function scrapeLengkap(slug: string): Promise<ScrapedLengkap | null
             episodes,
             batch
         }
-
     } catch (e) {
         console.error(`Error scraping lengkap ${slug}:`, e)
         return null

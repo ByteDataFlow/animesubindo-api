@@ -16,8 +16,14 @@ export const MalInfoSchema = z
         mal_id: z.number().optional().openapi({ example: 21 }),
         score: z.string().optional().openapi({ example: '8.73' }),
         synopsis: z.string().optional().openapi({ example: 'Barely surviving in a barrel...' }),
-        trailer_url: z.string().optional().openapi({ example: 'https://www.youtube.com/watch?v=-tviZNY6CSw' }),
-        mal_url: z.string().optional().openapi({ example: 'https://myanimelist.net/anime/21/One_Piece' })
+        trailer_url: z
+            .string()
+            .optional()
+            .openapi({ example: 'https://www.youtube.com/watch?v=-tviZNY6CSw' }),
+        mal_url: z
+            .string()
+            .optional()
+            .openapi({ example: 'https://myanimelist.net/anime/21/One_Piece' })
     })
     .nullable()
     .optional()
@@ -31,10 +37,12 @@ export const AnimeSchema = z
         image: z.string().optional().openapi({ example: 'https://otakudesu.blog/.../op.jpg' }),
         episode: z.string().optional().openapi({ example: 'Episode 1000' }),
         date: z.string().optional().openapi({ example: 'Hari Ini' }),
-        genres: z.array(z.string()).optional().openapi({ example: ['Action', 'Adventure'] }),
+        genres: z
+            .array(z.string())
+            .optional()
+            .openapi({ example: ['Action', 'Adventure'] }),
         status: z.string().optional().openapi({ example: 'Ongoing' }),
-        rating: z.string().optional().openapi({ example: '8.5' }),
-        mal: MalInfoSchema
+        rating: z.string().optional().openapi({ example: '8.5' })
     })
     .openapi('Anime')
 
@@ -111,17 +119,21 @@ export const EpisodeDetailSchema = z
         }),
         download_links: z.array(DownloadItemSchema),
         hasPrevEpisode: z.boolean(),
-        prevEpisode: z.object({
-            title: z.string(),
-            slug: z.string(),
-            url: z.string()
-        }).nullable(),
+        prevEpisode: z
+            .object({
+                title: z.string(),
+                slug: z.string(),
+                url: z.string()
+            })
+            .nullable(),
         hasNextEpisode: z.boolean(),
-        nextEpisode: z.object({
-            title: z.string(),
-            slug: z.string(),
-            url: z.string()
-        }).nullable()
+        nextEpisode: z
+            .object({
+                title: z.string(),
+                slug: z.string(),
+                url: z.string()
+            })
+            .nullable()
     })
     .openapi('EpisodeDetail')
 
@@ -178,13 +190,17 @@ export const LengkapSchema = z
         duration: z.string().optional(),
         image: z.string().optional(),
         release_date: z.string().optional(),
-        episodes: z.array(z.object({
-            title: z.string(),
-            downloadUrls: z.array(DownloadItemSchema)
-        })),
-        batch: z.object({
-            title: z.string(),
-            downloadUrls: z.array(DownloadItemSchema)
-        }).optional()
+        episodes: z.array(
+            z.object({
+                title: z.string(),
+                downloadUrls: z.array(DownloadItemSchema)
+            })
+        ),
+        batch: z
+            .object({
+                title: z.string(),
+                downloadUrls: z.array(DownloadItemSchema)
+            })
+            .optional()
     })
     .openapi('Lengkap')
