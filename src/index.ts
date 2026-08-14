@@ -16,6 +16,8 @@ import { registerEpisodeRoutes } from './routes/episodeRoutes'
 import { registerBatchRoutes } from './routes/batchRoutes'
 import { registerHealthRoute } from './routes/healthRoute'
 import { registerImageRoutes } from './routes/imageRoutes'
+import { registerProxyRoutes } from './routes/proxyRoutes'
+import { registerStreamResolverRoutes } from './routes/streamResolverRoutes'
 const app = new OpenAPIHono()
 
 // --- Middleware Stack ---
@@ -46,6 +48,8 @@ registerGenreRoutes(app)
 registerEpisodeRoutes(app)
 registerBatchRoutes(app)
 registerImageRoutes(app)
+registerProxyRoutes(app)
+registerStreamResolverRoutes(app)
 
 // --- Swagger Docs ---
 app.doc('/doc', {

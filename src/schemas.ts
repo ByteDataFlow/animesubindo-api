@@ -11,6 +11,19 @@ export const DownloadItemSchema = z.object({
     links: z.array(DownloadLinkSchema)
 })
 
+export const ProxyQuerySchema = z.object({
+    url: z.string().url().openapi({ example: 'https://desustream.net/beta/stream/?id=...' })
+})
+
+export const ResolvedStreamSchema = z
+    .object({
+        url: z.string().openapi({ example: 'https://ia601403.us.archive.org/...mp4' }),
+        type: z.enum(['mp4', 'hls']).openapi({ example: 'mp4' }),
+        mirror: z.string().openapi({ example: 'filedon' })
+    })
+    .nullable()
+    .openapi('ResolvedStream')
+
 export const MalInfoSchema = z
     .object({
         mal_id: z.number().optional().openapi({ example: 21 }),

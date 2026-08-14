@@ -10,7 +10,9 @@ import {
     GenreSchema,
     EpisodeDetailSchema,
     BatchSchema,
-    LengkapSchema
+    LengkapSchema,
+    ProxyQuerySchema,
+    ResolvedStreamSchema
 } from './schemas'
 
 // --- Anime Routes ---
@@ -275,6 +277,56 @@ export const getLengkapRoute = createRoute({
         404: {
             content: { 'application/json': { schema: ErrorResponseSchema } },
             description: 'Not Found'
+        }
+    }
+})
+
+// --- Proxy Routes ---
+
+export const getProxyStreamRoute = createRoute({
+    method: 'get',
+    path: '/api/proxy-stream',
+    summary: 'Proxy Iframe Stream',
+    request: {
+        query: ProxyQuerySchema
+    },
+    responses: {
+        200: {
+            content: {
+                'text/html': { schema: z.string() }
+            },
+            description: 'Proxied HTML iframe content'
+        },
+        500: {
+            content: { 'application/json': { schema: ErrorResponseSchema } },
+            description: 'Internal Server Error'
+        }
+    }
+})
+
+// --- Stream Resolver Routes ---
+
+export const getResolveStreamRoute = createRoute({
+    method: 'get',
+    path: '/api/resolve-stream',
+    summary: 'Resolve Direct Video URL',
+    description:
+        'Extracts the direct video URL (mp4/hls) from a supported mirror embed URL (filedon, vidhide). Returns null for unsupported mirrors.',
+    request: {
+        query: ProxyQuerySchema
+    },
+    responses: {
+        200: {
+            content: {
+                'application/json': {
+                    schema: SuccessResponseSchema(ResolvedStreamSchema)
+                }
+            },
+            description: 'Resolved video URL, or null if unsupported'
+        },
+        500: {
+            content: { 'application/json': { schema: ErrorResponseSchema } },
+            description: 'Internal Server Error'
         }
     }
 })

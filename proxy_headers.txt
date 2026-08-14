@@ -1,0 +1,12 @@
+HTTP/1.1 200 OK
+access-control-allow-origin: *
+access-control-expose-headers: RateLimit-Limit,RateLimit-Remaining,RateLimit-Reset
+content-type: text/html; charset=UTF-8
+ratelimit-limit: 100
+ratelimit-policy: 100;w=60
+ratelimit-remaining: 99
+ratelimit-reset: 60
+Date: Thu, 13 Aug 2026 22:44:31 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
