@@ -47,12 +47,23 @@ async function resolveFiledon(url: string): Promise<ResolvedStream | null> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// VIDHIDE (odvidhide.com)
-// The player JS is heavily obfuscated using Dean Edwards' Packer.
-// We extract the eval() block, replace eval with a function that returns the
-// unpacked string, and extract the authorized .m3u8 URL with its query params.
 // ─────────────────────────────────────────────────────────────────────────────
-async function resolveVidhide(url: string): Promise<ResolvedStream | null> {
+// VIDHIDE (odvidhide.com)
+// DISABLED: Vidhide uses strict IP-Locking on their CDN tokens (?t=...).
+// Extracting the m3u8 token via the backend (e.g. Vercel IP) causes a 403 Forbidden
+// when the frontend (User IP) tries to stream the video.
+// Returns null so the frontend falls back to the standard iframe embed (Opsi A).
+// ─────────────────────────────────────────────────────────────────────────────
+async function resolveVidhide(_url: string): Promise<ResolvedStream | null> {
+    return null
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ODSTREAM / DESUSTREAM (archive.org)
+// Some desustream links (like Odstream) host their files on archive.org.
+// These are NOT IP-Locked and can be safely extracted!
+// ─────────────────────────────────────────────────────────────────────────────
+async function resolveDesustreamArchive(url: string): Promise<ResolvedStream | null> {
     const response = await axios.get(url, {
         headers: DEFAULT_HEADERS,
         timeout: 10000
@@ -60,43 +71,10 @@ async function resolveVidhide(url: string): Promise<ResolvedStream | null> {
 
     const html: string = response.data
 
-    // Find the packed script block
-    // It looks like: eval(function(p,a,c,k,e,d)...)
-    const scriptMatch = html.match(/(eval\s*\(\s*function\s*\(\s*p\s*,\s*a\s*,\s*c\s*,\s*k\s*,\s*e\s*,\s*[rd]\s*\).*?)\s*<\/script>/is)
-    
-    if (!scriptMatch || !scriptMatch[1]) return null
-
-    let packedCode = scriptMatch[1]
-    
-    // Convert the eval into a return statement to safely extract the unpacked string
-    packedCode = packedCode.replace(/^eval/, 'return ')
-
-    try {
-        // Safely execute the unpacker logic within an isolated Function context
-        const unpacker = new Function(packedCode)
-        const unpacked: string = unpacker()
-
-        // The unpacked string contains the constructed master.m3u8 URL with full auth tokens
-        // Example: https://token.acek-cdn.com/hls2/01/08489/file_code/master.m3u8?t=...
-        const m3u8Match = unpacked.match(/["'](https?:\/\/[^"']+\.m3u8[^"']*)["']/)
-        
-        if (m3u8Match && m3u8Match[1]) {
-            const m3u8Url = m3u8Match[1]
-            
-            // Try to verify - if HEAD fails, still return the URL
-            try {
-                await axios.head(m3u8Url, {
-                    headers: { Referer: 'https://odvidhide.com/' },
-                    timeout: 4000
-                })
-            } catch (_e) {
-                // Ignore HEAD errors, let frontend try playing
-            }
-
-            return { url: m3u8Url, type: 'hls', mirror: 'vidhide' }
-        }
-    } catch (e: any) {
-        console.error('[resolveVidhide] Unpack Error:', e.message)
+    // Match: file:"https://archive.org/download/..."
+    const match = html.match(/file\s*:\s*["'](https:\/\/archive\.org\/download\/[^"']+)["']/)
+    if (match && match[1]) {
+        return { url: match[1], type: 'mp4', mirror: 'odstream' }
     }
 
     return null
@@ -105,7 +83,7 @@ async function resolveVidhide(url: string): Promise<ResolvedStream | null> {
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN RESOLVER
 // Detects provider from hostname and dispatches to the correct resolver.
-// Returns null for unsupported mirrors (odstream, ondesuhd, blogger, etc.)
+// Returns null for unsupported mirrors (ondesuhd, blogger, etc.)
 // — caller should fall back to iframe embed for those.
 // ─────────────────────────────────────────────────────────────────────────────
 export async function resolveStream(embedUrl: string): Promise<ResolvedStream | null> {
@@ -118,6 +96,12 @@ export async function resolveStream(embedUrl: string): Promise<ResolvedStream | 
 
         if (hostname.includes('vidhide') || hostname.includes('odvidhide')) {
             return await resolveVidhide(embedUrl)
+        }
+
+        if (hostname.includes('desustream')) {
+            // Only odstream (archive.org) can be extracted.
+            // ondesuhd (googlevideo) will fail the regex and return null.
+            return await resolveDesustreamArchive(embedUrl)
         }
 
         // Unsupported mirror — caller should fall back to iframe embed
