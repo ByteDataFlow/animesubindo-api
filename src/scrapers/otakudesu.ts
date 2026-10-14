@@ -865,6 +865,29 @@ export async function scrapeEpisodeDetail(slug: string): Promise<ScrapedEpisodeD
         // Extract download links
         const download_links = extractDownloadLinks($)
 
+        // Augment streaming_mirrors with Pdrain (Pixeldrain) from download_links for custom player
+        for (const dl of download_links) {
+            const pdrainLink = dl.links.find((l) => l.provider.toLowerCase().includes('pdrain'))
+            if (pdrainLink) {
+                const cleanQuality = dl.resolution
+                    .replace(/^Mp4\s+/i, '')
+                    .replace(/^MKV\s+/i, '')
+                    .trim()
+
+                let mirrorGroup = streaming_mirrors.find(
+                    (m) => m.quality.toLowerCase() === cleanQuality.toLowerCase()
+                )
+                if (!mirrorGroup) {
+                    mirrorGroup = { quality: cleanQuality, sources: [] }
+                    streaming_mirrors.push(mirrorGroup)
+                }
+
+                if (!mirrorGroup.sources.some((s) => s.name.toLowerCase() === 'pdrain')) {
+                    mirrorGroup.sources.push({ name: 'pdrain', url: pdrainLink.url })
+                }
+            }
+        }
+
         // Extract navigation links (prev/next episode)
         const navigation = extractNavigationLinks($)
 

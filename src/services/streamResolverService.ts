@@ -81,6 +81,46 @@ async function resolveDesustreamArchive(url: string): Promise<ResolvedStream | n
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PIXELDRAIN (pdrain)
+// Supports direct pixeldrain URLs (/u/{id} or /api/file/{id})
+// as well as Otakudesu link redirect URLs (link.desustream.com/?id=...)
+// Returns direct stream: https://pixeldrain.com/api/file/{id} (CORS-enabled mp4)
+// ─────────────────────────────────────────────────────────────────────────────
+async function resolvePixeldrain(url: string): Promise<ResolvedStream | null> {
+    try {
+        let targetUrl = url
+
+        // If it's a desustream redirect link, follow the 302 location header
+        if (url.includes('link.desustream.com') || url.includes('desustream.net')) {
+            const res = await axios.get(url, {
+                headers: DEFAULT_HEADERS,
+                maxRedirects: 0,
+                timeout: 10000,
+                validateStatus: (status) => status >= 200 && status < 400
+            })
+            const location = res.headers['location']
+            if (location) {
+                targetUrl = location
+            }
+        }
+
+        const match = targetUrl.match(/pixeldrain\.com\/(?:u|api\/file)\/([a-zA-Z0-9_-]+)/)
+        if (match && match[1]) {
+            return {
+                url: `https://pixeldrain.com/api/file/${match[1]}`,
+                type: 'mp4',
+                mirror: 'pdrain'
+            }
+        }
+
+        return null
+    } catch (error: any) {
+        console.error('[resolvePixeldrain] Error:', error?.message)
+        return null
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MAIN RESOLVER
 // Detects provider from hostname and dispatches to the correct resolver.
 // Returns null for unsupported mirrors (ondesuhd, blogger, etc.)
@@ -98,10 +138,22 @@ export async function resolveStream(embedUrl: string): Promise<ResolvedStream | 
             return await resolveVidhide(embedUrl)
         }
 
+        if (hostname.includes('pixeldrain')) {
+            return await resolvePixeldrain(embedUrl)
+        }
+
         if (hostname.includes('desustream')) {
-            // Only odstream (archive.org) can be extracted.
-            // ondesuhd (googlevideo) will fail the regex and return null.
-            return await resolveDesustreamArchive(embedUrl)
+            // link.desustream.com is used for download link redirects (e.g. pdrain)
+            if (embedUrl.includes('link.desustream.com')) {
+                return await resolvePixeldrain(embedUrl)
+            }
+
+            // Odstream (archive.org) embed
+            const archiveResult = await resolveDesustreamArchive(embedUrl)
+            if (archiveResult) return archiveResult
+
+            // Fallback: check if other desustream URLs redirect to pixeldrain
+            return await resolvePixeldrain(embedUrl)
         }
 
         // Unsupported mirror — caller should fall back to iframe embed
